@@ -32,6 +32,7 @@ docker exec -it id_immobilier_airflow airflow users create --username admin --pa
 
 ```powershell
 docker cp dags/dag_immobilier.py id_immobilier_airflow:/opt/airflow/dags/dag_immobilier.py
+docker cp dags/dag_immobilier.py id_immobilier_airflow:/opt/airflow/dags/dag_immobilier.py
 ```
 
 ---
@@ -57,3 +58,5 @@ Tu dois voir 4 conteneurs verts :
 - Clique **une seule fois** sur Trigger DAG
 - Surveille `http://127.0.0.1:8082` pour Spark
 
+# pour le dashbord frontend 
+streamlit run dashboard/app.py

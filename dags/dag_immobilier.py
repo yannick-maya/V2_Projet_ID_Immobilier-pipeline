@@ -62,7 +62,7 @@ def run_cleaning_spark():
             "--master", "spark://spark:7077",
             "/app/pipeline/cleaning_v2.py"
         ],
-        capture_output=True, text=True, timeout=600
+        capture_output=True, text=True, timeout=1800
     )
     print(result.stdout)
     if result.returncode != 0:
