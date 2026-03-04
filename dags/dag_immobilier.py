@@ -1,7 +1,7 @@
 """
 DAG Apache Airflow - ID Immobilier
 Orchestration complete du pipeline de donnees
-Frequence : hebdomadaire (chaque jour a 6h00)
+Frequence : tous les jours a 6h00
 """
 
 from airflow import DAG
@@ -22,10 +22,38 @@ default_args = {
 dag = DAG(
     dag_id="id_immobilier_pipeline",
     default_args=default_args,
-    description="Pipeline ID Immobilier - Ingestion -> Cleaning Spark -> Modeling -> Indicateurs -> Indice",
-    schedule_interval="0 6 * * *",  # Tous les jours a 6h00
+    description="Pipeline ID Immobilier - Scraping -> Ingestion -> Cleaning Spark -> Modeling -> Indicateurs -> Indice",
+    schedule_interval="0 6 * * *",
     catchup=False,
     tags=["immobilier", "togo", "big-data"],
+)
+
+# ── Tache 0 : Scraping ImmoAsk ────────────────────────────────────────────────
+def run_scraping_immoask():
+    sys.path.insert(0, "/opt/airflow")
+    from pipeline.scrapers.scraper_immoask import ImmoAskScraper
+    scraper = ImmoAskScraper(limit=500)
+    scraper.run()  # sauvegarde automatiquement dans data/raw/scraped/immoask_<ts>.csv
+
+task_scraping = PythonOperator(
+    task_id="scraping_immoask",
+    python_callable=run_scraping_immoask,
+    dag=dag,
+    execution_timeout=timedelta(minutes=5),
+)
+
+# ── Tache 0b : Scraping CoinAfrique ─────────────────────────────────────────
+def run_scraping_coinafrique():
+    sys.path.insert(0, "/opt/airflow")
+    from pipeline.scrapers.scraper_coinafrique import CoinAfriqueScraperTogo
+    scraper = CoinAfriqueScraperTogo(max_pages=60)
+    scraper.run()  # sauvegarde dans data/raw/scraped/coinafrique_<ts>.csv
+
+task_scraping_coinafrique = PythonOperator(
+    task_id="scraping_coinafrique",
+    python_callable=run_scraping_coinafrique,
+    dag=dag,
+    execution_timeout=timedelta(minutes=45),  # 60 pages × ~1.5s = ~20-30 min
 )
 
 # ── Tache 1 : Ingestion ───────────────────────────────────────────────────────
@@ -46,13 +74,12 @@ task_nettoyage = BashOperator(
     bash_command=(
         "rm -f /opt/airflow/data/cleaned_v2/annonces_clean.csv && "
         "rm -f /opt/airflow/data/raw/rejets/annonces_rejetees.csv && "
-        "echo 'Anciens fichiers pandas supprimes'"
+        "echo 'Anciens fichiers supprimes'"
     ),
     dag=dag,
 )
 
-# ── Tache 2b : Nettoyage V2 avec Spark via docker exec ───────────────────────
-# Airflow n'a pas spark-submit — on soumet le job via le conteneur Spark
+# ── Tache 2b : Cleaning Spark ─────────────────────────────────────────────────
 def run_cleaning_spark():
     import subprocess
     result = subprocess.run(
@@ -60,7 +87,7 @@ def run_cleaning_spark():
             "docker", "exec", "id_immobilier_spark",
             "/opt/spark/bin/spark-submit",
             "--master", "spark://spark:7077",
-            "/app/pipeline/cleaning_v2.py"
+            "/app/pipeline/cleaning_v2_spark.py",   # ← fichier corrigé
         ],
         capture_output=True, text=True, timeout=1800
     )
@@ -114,4 +141,20 @@ task_index = PythonOperator(
 )
 
 # ── Ordre d execution ─────────────────────────────────────────────────────────
-task_ingestion >> task_nettoyage >> task_cleaning >> task_modeling >> task_indicators >> task_index
+#
+#   scraping_immoask
+#         ↓
+#   ingestion_donnees
+#         ↓
+#   nettoyage_precedent
+#         ↓
+#   cleaning_pyspark_v2
+#         ↓
+#   modeling_mysql_v2
+#         ↓
+#   calcul_indicateurs
+#         ↓
+#   calcul_indice
+#
+# Les 2 scrapings tournent en PARALLÈLE, puis ingestion attend les 2
+[task_scraping, task_scraping_coinafrique] >> task_ingestion >> task_nettoyage >> task_cleaning >> task_modeling >> task_indicators >> task_index
