@@ -46,7 +46,7 @@ task_scraping = PythonOperator(
 def run_scraping_coinafrique():
     sys.path.insert(0, "/opt/airflow")
     from pipeline.scrapers.scraper_coinafrique import CoinAfriqueScraperTogo
-    scraper = CoinAfriqueScraperTogo(max_pages=60)
+    scraper = CoinAfriqueScraperTogo(max_pages=1)  # Limite à 1 pages pour éviter les problèmes de timeout
     scraper.run()  # sauvegarde dans data/raw/scraped/coinafrique_<ts>.csv
 
 task_scraping_coinafrique = PythonOperator(
