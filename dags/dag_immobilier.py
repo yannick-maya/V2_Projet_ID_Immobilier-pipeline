@@ -15,8 +15,8 @@ default_args = {
     "depends_on_past": False,
     "start_date": datetime(2024, 1, 1),
     "email_on_failure": False,
-    "retries": 1,
-    "retry_delay": timedelta(minutes=5),
+    "retries": 2,
+    "retry_delay": timedelta(minutes=15),
 }
 
 dag = DAG(
@@ -42,19 +42,19 @@ task_scraping = PythonOperator(
     execution_timeout=timedelta(minutes=5),
 )
 
-# ── Tache 0b : Scraping CoinAfrique ─────────────────────────────────────────
-def run_scraping_coinafrique():
-    sys.path.insert(0, "/opt/airflow")
-    from pipeline.scrapers.scraper_coinafrique import CoinAfriqueScraperTogo
-    scraper = CoinAfriqueScraperTogo(max_pages=1)  # Limite à 1 pages pour éviter les problèmes de timeout
-    scraper.run()  # sauvegarde dans data/raw/scraped/coinafrique_<ts>.csv
+# # ── Tache 0b : Scraping CoinAfrique ─────────────────────────────────────────
+# def run_scraping_coinafrique():
+#     sys.path.insert(0, "/opt/airflow")
+#     from pipeline.scrapers.scraper_coinafrique import CoinAfriqueScraperTogo
+#     scraper = CoinAfriqueScraperTogo(max_pages=1)  # Limite à 1 pages pour éviter les problèmes de timeout
+#     scraper.run()  # sauvegarde dans data/raw/scraped/coinafrique_<ts>.csv
 
-task_scraping_coinafrique = PythonOperator(
-    task_id="scraping_coinafrique",
-    python_callable=run_scraping_coinafrique,
-    dag=dag,
-    execution_timeout=timedelta(minutes=45),  # 60 pages × ~1.5s = ~20-30 min
-)
+# task_scraping_coinafrique = PythonOperator(
+#     task_id="scraping_coinafrique",
+#     python_callable=run_scraping_coinafrique,
+#     dag=dag,
+#     execution_timeout=timedelta(minutes=10),  # 60 pages × ~1.5s = ~20-30 min
+# )
 
 # ── Tache 1 : Ingestion ───────────────────────────────────────────────────────
 def run_ingestion():
