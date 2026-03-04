@@ -93,10 +93,12 @@ def vider_tables(conn):
 
 # Mapping de standardisation des noms de sources
 SOURCES_STANDARD = {
-    "immoask"    : "ImmoAsk",
-    "facebook"   : "Facebook",
-    "coinafrique": "CoinAfrique",
-    "valeursvenales": "ValeursVenales",
+    "immoask"            : "ImmoAsk",
+    "facebook"           : "Facebook",
+    "coinafrique"        : "CoinAfrique",
+    "valeursvenales"     : "ValeursVenales",
+    "immoask_scraped"    : "ImmoAsk",        # même source, données scrapées
+    "coinafrique_scraped": "CoinAfrique",    # même source, données scrapées
 }
 
 def standardiser_source(nom):
@@ -140,6 +142,18 @@ def charger_references(conn):
     zones = {nom.lower().strip(): id_ for id_, nom in cursor.fetchall()}
     cursor.execute("SELECT id, nom FROM source_donnees")
     sources = {nom.lower().strip(): id_ for id_, nom in cursor.fetchall()}
+
+    # Ajouter les alias pour les sources scrapées
+    # immoask_scraped → même id que immoask
+    # coinafrique_scraped → même id que coinafrique
+    ALIAS = {
+        "immoask_scraped"    : "immoask",
+        "coinafrique_scraped": "coinafrique",
+    }
+    for alias, original in ALIAS.items():
+        if original in sources:
+            sources[alias] = sources[original]
+
     cursor.close()
     print(f"  {len(zones)} zones en memoire | {len(sources)} sources en memoire")
     return zones, sources
@@ -167,7 +181,16 @@ def insert_annonces(conn, df):
             prix     = float(row["prix"]) if pd.notna(row.get("prix")) else None
             pieces_raw = row.get("pieces")
             pieces   = int(float(pieces_raw)) if pd.notna(pieces_raw) and str(pieces_raw).replace(".", "").isdigit() else None
+            # Conversion lots → m² (1 lot = 600 m² norme foncière Togo)
+            if surface and surface <= 10:
+                titre_str = str(row.get("titre", "")).lower()
+                if "lot" in titre_str:
+                    surface = surface * 600
+
             prix_m2  = round(prix / surface, 2) if prix and surface and surface > 0 else None
+            # Ignorer les prix/m² aberrants (< 1 ou surface incohérente)
+            if prix_m2 is not None and prix_m2 < 1:
+                prix_m2 = None
 
             type_bien_raw = str(row.get("type_bien", "Inconnu")).strip()
             type_bien_std = TYPES_BIEN_STANDARD.get(type_bien_raw.lower(), type_bien_raw.title())
@@ -359,7 +382,6 @@ def run():
 
     conn.close()
     print("\nModelisation V2 terminee !")
-
-
+ 
 if __name__ == "__main__":
-    run()
+    run()   

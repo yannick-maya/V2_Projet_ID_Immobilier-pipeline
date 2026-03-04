@@ -18,9 +18,10 @@ os.makedirs(CLEANED_DIR, exist_ok=True)
 os.makedirs(REJETS_DIR, exist_ok=True)
 
 # ── Regles metier ──────────────────────────────────────────────────────────────
-PRIX_M2_MIN  = 1_000
-PRIX_M2_MAX  = 2_000_000
 ZONE_MAX_LEN = 30
+
+PRIX_MIN = 10_000           # FCFA — en dessous : erreur de saisie
+PRIX_MAX = 5_000_000_000    # FCFA — au dessus : aberrant (5 milliards)
 
 MOTS_SUSPECTS = [
     "pharmacie", "cote de", "juste", "derriere", "face a",
@@ -127,9 +128,9 @@ def normalise_scraped_immoask(df: pd.DataFrame) -> pd.DataFrame:
 def normalise_scraped_coinafrique(df: pd.DataFrame) -> pd.DataFrame:
     """
     Ramène les colonnes brutes CoinAfrique au format attendu par clean_annonces().
-    Colonnes brutes  : source, reference, titre, offre, type_bien, localisation,
-                       prix, piece, surface, url
-    Colonnes cibles  : Titre, Type d'offre, Type de bien, Quartier, Prix, Piece, Surface
+    Colonnes brutes  : source, reference, titre, offre, type_bien, quartier,
+                       ville, prix, piece, surface, url
+    Note : quartier et prix sont déjà propres (extraits dans le scraper).
     """
     df = df.copy()
 
@@ -138,23 +139,22 @@ def normalise_scraped_coinafrique(df: pd.DataFrame) -> pd.DataFrame:
         "louer": "LOCATION", "location": "LOCATION",
         "vendre": "VENTE",   "vente": "VENTE",
     }
-    df["Type d'offre"] = (
-        df["offre"].astype(str).str.strip().str.lower()
-        .map(offre_map)
-        .fillna(df["offre"].astype(str).str.upper())
-    )
+    # Depuis colonne offre
+    offre_from_col = df["offre"].astype(str).str.strip().str.lower().map(offre_map)
+    # Fallback depuis le titre
+    titre_lower = df["titre"].astype(str).str.lower()
+    offre_from_titre = pd.Series("NON SPECIFIE", index=df.index)
+    offre_from_titre = offre_from_titre.where(~titre_lower.str.contains("vente|vendre"), "VENTE")
+    offre_from_titre = offre_from_titre.where(~titre_lower.str.contains("location|louer"), "LOCATION")
+    df["Type d'offre"] = offre_from_col.fillna(offre_from_titre)
 
-    # Prix : nettoyer le format "150 000 CFA" → 150000 (Spark fera le vrai nettoyage)
-    df["Prix"] = (
-        df["prix"].astype(str)
-        .str.replace(r"[^\d]", "", regex=True)
-        .replace("", None)
-    )
+    # Quartier : déjà propre depuis le scraper
+    df["Quartier"] = df["quartier"].fillna("Non spécifié")
 
-    # Quartier : utiliser localisation brute (Spark affinera)
-    df["Quartier"] = df["localisation"].fillna("Non spécifié")
+    # Prix : déjà un entier depuis le scraper
+    df["Prix"] = pd.to_numeric(df["prix"], errors="coerce")
 
-    # Renommage simple
+    # Renommage
     df = df.rename(columns={
         "titre"    : "Titre",
         "type_bien": "Type de bien",
@@ -217,9 +217,12 @@ def ajouter_raison_rejet(df):
     mask = df["prix"].isna() | df["surface_m2"].isna()
     df.loc[mask & df["raison_rejet"].isna(), "raison_rejet"] = "prix_ou_surface_manquant"
 
-    df["prix_m2_calc"] = df["prix"] / df["surface_m2"].replace(0, np.nan)
-    df.loc[(df["prix_m2_calc"] > PRIX_M2_MAX) & df["raison_rejet"].isna(), "raison_rejet"] = "prix_m2_trop_eleve"
-    df.loc[(df["prix_m2_calc"] < PRIX_M2_MIN) & df["raison_rejet"].isna(), "raison_rejet"] = "prix_m2_trop_bas"
+    # Regle 5 : prix total aberrant
+    mask = df["prix"] < PRIX_MIN
+    df.loc[mask & df["raison_rejet"].isna(), "raison_rejet"] = "prix_trop_bas"
+
+    mask = df["prix"] > PRIX_MAX
+    df.loc[mask & df["raison_rejet"].isna(), "raison_rejet"] = "prix_trop_eleve"
 
     return df
 
@@ -262,7 +265,7 @@ def clean_annonces(source_name):
 
     if "type_bien" in df.columns:
         pieces_extraites = df["type_bien"].apply(extraire_pieces)
-        df["pieces"]     = df["pieces"].fillna(pieces_extraites)
+        df["pieces"]     = df["pieces"].fillna(pieces_extraites).infer_objects(copy=False)
         df["type_bien"]  = df["type_bien"].apply(standardiser_type_bien)
 
     if "type_offre" in df.columns:
@@ -271,8 +274,8 @@ def clean_annonces(source_name):
     # ── Règles de rejet ───────────────────────────────────────────────────────
     df = ajouter_raison_rejet(df)
 
-    df_valides = df[df["raison_rejet"].isna()].drop(columns=["raison_rejet", "prix_m2_calc"], errors="ignore")
-    df_rejetes = df[df["raison_rejet"].notna()].drop(columns=["prix_m2_calc"], errors="ignore")
+    df_valides = df[df["raison_rejet"].isna()].drop(columns=["raison_rejet"], errors="ignore")
+    df_rejetes = df[df["raison_rejet"].notna()]
 
     df_valides = df_valides.drop_duplicates(subset=["titre", "prix", "zone", "surface_m2"])
 

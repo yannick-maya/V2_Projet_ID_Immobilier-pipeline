@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_CONFIG = {
-    "host": os.getenv("MYSQL_HOST", "localhost"),
-    "user": os.getenv("MYSQL_USER", "root"),
+    "host":     os.getenv("MYSQL_HOST", "localhost"),
+    "user":     os.getenv("MYSQL_USER", "root"),
     "password": os.getenv("MYSQL_PASSWORD", ""),
     "database": os.getenv("MYSQL_DB", "id_immobilier"),
 }
@@ -43,27 +43,33 @@ def calculer_statistiques(conn):
 
     # Calcul des statistiques groupées
     stats = df.groupby(["id_zone", "zone", "type_bien", "type_offre"]).agg(
-        prix_moyen_m2=("prix_m2", "mean"),
-        prix_median_m2=("prix_m2", "median"),
-        prix_min=("prix", "min"),
-        prix_max=("prix", "max"),
-        nombre_annonces=("prix_m2", "count")
+        prix_moyen_m2   = ("prix_m2", "mean"),
+        prix_median_m2  = ("prix_m2", "median"),
+        prix_min        = ("prix", "min"),
+        prix_max        = ("prix", "max"),
+        nombre_annonces = ("prix_m2", "count")
     ).reset_index()
 
-    stats["prix_moyen_m2"] = stats["prix_moyen_m2"].round(2)
+    stats["prix_moyen_m2"]  = stats["prix_moyen_m2"].round(2)
     stats["prix_median_m2"] = stats["prix_median_m2"].round(2)
-    stats["periode"] = "GLOBAL"
+    stats["periode"]        = "GLOBAL"
 
     # Calcul écart vs valeurs vénales
     venales_query = """
-        SELECT z.nom AS zone, vv.prix_m2_officiel
+        SELECT z.nom AS zone, AVG(vv.prix_m2_officiel) AS prix_m2_officiel
         FROM valeur_venale vv
         JOIN zone_geographique z ON vv.id_zone = z.id
+        GROUP BY z.nom
     """
     df_venales = pd.read_sql(venales_query, conn)
     stats = stats.merge(df_venales, on="zone", how="left")
-    stats["ecart_valeur_venale"] = (
-        (stats["prix_moyen_m2"] - stats["prix_m2_officiel"]) / stats["prix_m2_officiel"] * 100
+
+    # Protection division par zéro si prix_m2_officiel est 0 ou manquant
+    mask = stats["prix_m2_officiel"].notna() & (stats["prix_m2_officiel"] > 0)
+    stats["ecart_valeur_venale"] = None
+    stats.loc[mask, "ecart_valeur_venale"] = (
+        (stats.loc[mask, "prix_moyen_m2"] - stats.loc[mask, "prix_m2_officiel"])
+        / stats.loc[mask, "prix_m2_officiel"] * 100
     ).round(2)
 
     return stats
@@ -78,15 +84,21 @@ def inserer_statistiques(conn, stats):
                 prix_min, prix_max, nombre_annonces, ecart_valeur_venale)
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
             (
-                int(row["id_zone"]), str(row["type_bien"]), str(row["type_offre"]),
-                str(row["periode"]), float(row["prix_moyen_m2"]), float(row["prix_median_m2"]),
-                float(row["prix_min"]), float(row["prix_max"]), int(row["nombre_annonces"]),
+                int(row["id_zone"]),
+                str(row["type_bien"]),
+                str(row["type_offre"]),
+                str(row["periode"]),
+                float(row["prix_moyen_m2"]),
+                float(row["prix_median_m2"]),
+                float(row["prix_min"]),
+                float(row["prix_max"]),
+                int(row["nombre_annonces"]),
                 float(row["ecart_valeur_venale"]) if pd.notna(row.get("ecart_valeur_venale")) else None
             )
         )
     conn.commit()
     cursor.close()
-    print(f" {len(stats)} statistiques insérées")
+    print(f"  {len(stats)} statistiques insérées")
 
 
 def afficher_top_zones(stats):
@@ -100,13 +112,13 @@ def afficher_top_zones(stats):
 
 
 def run():
-    print(" Calcul des indicateurs...")
+    print("  Calcul des indicateurs...")
     conn = get_connection()
     stats = calculer_statistiques(conn)
     inserer_statistiques(conn, stats)
     afficher_top_zones(stats)
     conn.close()
-    print(" Indicateurs calculés !")
+    print("  Indicateurs calculés !")
 
 
 if __name__ == "__main__":

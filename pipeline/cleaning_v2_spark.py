@@ -15,9 +15,10 @@ CLEANED_DIR = os.path.join(BASE_DIR, "data", "cleaned_v2")
 REJETS_DIR  = os.path.join(BASE_DIR, "data", "raw", "rejets")
 
 # ── Regles metier ─────────────────────────────────────────────────────────────
-PRIX_M2_MIN  = 1_000
-PRIX_M2_MAX  = 2_000_000
 ZONE_MAX_LEN = 30
+
+PRIX_MIN = 10_000           # FCFA — en dessous : erreur de saisie
+PRIX_MAX = 5_000_000_000    # FCFA — au dessus : aberrant (5 milliards)
 
 MOTS_SUSPECTS = [
     "pharmacie", "cote de", "juste", "derriere", "face a",
@@ -129,21 +130,20 @@ def ajouter_raison_rejet(df):
             F.lit("prix_ou_surface_manquant")
         ).otherwise(F.col("raison_rejet")))
 
-    df = df.withColumn("prix_m2_calc",
-        F.when(F.col("surface_m2") > 0, F.col("prix") / F.col("surface_m2"))
-         .otherwise(F.lit(None).cast(DoubleType())))
+    # Regle 5 : prix total aberrant
+    df = df.withColumn("raison_rejet",
+        F.when(
+            (F.col("prix") < PRIX_MIN) & F.col("raison_rejet").isNull(),
+            F.lit("prix_trop_bas")
+        ).otherwise(F.col("raison_rejet")))
 
     df = df.withColumn("raison_rejet",
-        F.when((F.col("prix_m2_calc") > PRIX_M2_MAX) & F.col("raison_rejet").isNull(),
-               F.lit("prix_m2_trop_eleve"))
-         .otherwise(F.col("raison_rejet")))
+        F.when(
+            (F.col("prix") > PRIX_MAX) & F.col("raison_rejet").isNull(),
+            F.lit("prix_trop_eleve")
+        ).otherwise(F.col("raison_rejet")))
 
-    df = df.withColumn("raison_rejet",
-        F.when((F.col("prix_m2_calc") < PRIX_M2_MIN) & F.col("raison_rejet").isNull(),
-               F.lit("prix_m2_trop_bas"))
-         .otherwise(F.col("raison_rejet")))
-
-    return df.drop("prix_m2_calc")
+    return df
 
 
 # ── Normalisation sources scrapées ────────────────────────────────────────────
@@ -190,26 +190,34 @@ def normalise_scraped_immoask(df):
 def normalise_scraped_coinafrique(df):
     """
     Convertit les colonnes brutes CoinAfrique vers le format pipeline Spark.
-    offre → type_offre | localisation → zone | prix (nettoyé) | type_bien, piece, surface
+    Note : quartier et prix sont déjà propres (extraits dans le scraper).
     """
-    # Type offre
+    # Type offre depuis colonne offre
     offre_expr = F.lower(F.trim(F.col("offre")))
     type_offre = F.lit("NON SPECIFIE")
     for raw, standard in [("louer","LOCATION"),("location","LOCATION"),("vendre","VENTE"),("vente","VENTE")]:
         type_offre = F.when(offre_expr == raw, F.lit(standard)).otherwise(type_offre)
+    # Fallback depuis le titre
+    titre_lower = F.lower(F.col("titre"))
+    type_offre = F.when(type_offre == "NON SPECIFIE",
+        F.when(titre_lower.contains("vente") | titre_lower.contains("vendre"), F.lit("VENTE"))
+         .when(titre_lower.contains("location") | titre_lower.contains("louer"), F.lit("LOCATION"))
+         .otherwise(F.lit("NON SPECIFIE"))
+    ).otherwise(type_offre)
     df = df.withColumn("type_offre", type_offre)
 
-    # Prix : supprimer tout sauf les chiffres
-    df = df.withColumn("prix",
-        F.regexp_replace(F.col("prix").cast("string"), r"[^\d]", "").cast(DoubleType())
-    )
+    # Prix : déjà un entier depuis le scraper, juste caster
+    df = df.withColumn("prix", F.col("prix").cast(DoubleType()))
+
+    # Quartier : déjà propre depuis le scraper
+    df = df.withColumn("quartier", F.coalesce(F.col("quartier"), F.lit("Non spécifié")))
 
     # Renommage
     rename_map = {
-        "type_bien"   : "type_bien",   # déjà bon
-        "localisation": "zone",
-        "piece"       : "pieces",
-        "surface"     : "surface_m2",
+        "type_bien": "type_bien",
+        "quartier" : "zone",
+        "piece"    : "pieces",
+        "surface"  : "surface_m2",
     }
     for old_col, new_col in rename_map.items():
         if old_col in df.columns:
