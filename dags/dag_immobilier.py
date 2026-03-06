@@ -15,8 +15,8 @@ default_args = {
     "depends_on_past": False,
     "start_date": datetime(2024, 1, 1),
     "email_on_failure": False,
-    "retries": 2,
-    "retry_delay": timedelta(minutes=15),
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
 }
 
 dag = DAG(
@@ -33,27 +33,13 @@ def run_scraping_immoask():
     sys.path.insert(0, "/opt/airflow")
     from pipeline.scrapers.scraper_immoask import ImmoAskScraper
     scraper = ImmoAskScraper(limit=500)
-    scraper.run()  # sauvegarde automatiquement dans data/raw/scraped/immoask_<ts>.csv
+    scraper.run()
 
 task_scraping = PythonOperator(
     task_id="scraping_immoask",
     python_callable=run_scraping_immoask,
     dag=dag,
     execution_timeout=timedelta(minutes=5),
-)
-
-# ── Tache 0b : Scraping CoinAfrique ─────────────────────────────────────────
-def run_scraping_coinafrique():
-    sys.path.insert(0, "/opt/airflow")
-    from pipeline.scrapers.scraper_coinafrique import CoinAfriqueScraperTogo
-    scraper = CoinAfriqueScraperTogo(max_pages=1)  # Limite à 1 pages pour éviter les problèmes de timeout
-    scraper.run()  # sauvegarde dans data/raw/scraped/coinafrique_<ts>.csv
-
-task_scraping_coinafrique = PythonOperator(
-    task_id="scraping_coinafrique",
-    python_callable=run_scraping_coinafrique,
-    dag=dag,
-    execution_timeout=timedelta(minutes=10),  # 60 pages × ~1.5s = ~20-30 min
 )
 
 # ── Tache 1 : Ingestion ───────────────────────────────────────────────────────
@@ -87,7 +73,7 @@ def run_cleaning_spark():
             "docker", "exec", "id_immobilier_spark",
             "/opt/spark/bin/spark-submit",
             "--master", "spark://spark:7077",
-            "/app/pipeline/cleaning_v2_spark.py",   # ← fichier corrigé
+            "/app/pipeline/cleaning_v2_spark.py",
         ],
         capture_output=True, text=True, timeout=1800
     )
@@ -101,7 +87,7 @@ task_cleaning = PythonOperator(
     task_id="cleaning_pyspark_v2",
     python_callable=run_cleaning_spark,
     dag=dag,
-    execution_timeout=timedelta(minutes=15),
+    execution_timeout=timedelta(minutes=45),
 )
 
 # ── Tache 3 : Modelisation V2 ─────────────────────────────────────────────────
@@ -156,5 +142,4 @@ task_index = PythonOperator(
 #         ↓
 #   calcul_indice
 #
-# Les 2 scrapings tournent en PARALLÈLE, puis ingestion attend les 2
-[task_scraping, task_scraping_coinafrique] >> task_ingestion >> task_nettoyage >> task_cleaning >> task_modeling >> task_indicators >> task_index
+task_scraping >> task_ingestion >> task_nettoyage >> task_cleaning >> task_modeling >> task_indicators >> task_index

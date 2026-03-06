@@ -25,6 +25,7 @@ import logging
 from urllib.parse import urljoin
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ class CoinAfriqueScraperTogo:
 
     # ── 2. Extraction d'une annonce ───────────────────────────────────────────
 
-    def extract_listing(self, url: str) -> dict | None:
+    def extract_listing(self, url: str) -> Optional[dict]:
         """Extrait les champs bruts d'une annonce."""
         try:
             time.sleep(DELAY)
@@ -201,7 +202,7 @@ class CoinAfriqueScraperTogo:
             piece = int(m.group(1)) if m else None
 
             # ── Surface depuis titre + description ────────────────────────────
-            m = re.search(r"(\d+(?:\.\d+)?)\s*(?:m²|m2|lots?)",
+            m = re.search(r"(\d+(?:\.\d+)?)\s*(?:m²|m2)",
                           f"{titre or ''} {description}", re.I)
             surface = float(m.group(1)) if m else None
 

@@ -5,6 +5,7 @@ Lecture des 4 sources Excel + CSV scrapés et sauvegarde en CSV dans data/raw/
 
 import pandas as pd
 import os
+from typing import Optional
 import glob
 
 BASE_DIR     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +28,7 @@ SCRAPED_SOURCES = {
 }
 
 
-def get_latest_file(pattern: str) -> str | None:
+def get_latest_file(pattern: str) -> Optional[str]:
     """Retourne le fichier le plus récent correspondant au pattern."""
     files = glob.glob(pattern)
     if not files:
