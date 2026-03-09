@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Architecture ID Immobilier</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #F0F2F5;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 24px 48px;
+}
+.page-title { font-size:15px; font-weight:800; color:#1A2E3B; letter-spacing:2px; text-transform:uppercase; margin-bottom:3px; }
+.page-sub   { font-size:11px; color:#7A909A; margin-bottom:32px; letter-spacing:0.5px; }
+
+.flow { display:flex; flex-direction:column; align-items:center; width:700px; }
+
+.bloc { width:100%; border-radius:10px; overflow:hidden; box-shadow:0 2px 14px rgba(0,0,0,0.13); }
+.bloc-header { padding:11px 20px; display:flex; align-items:center; justify-content:center; gap:8px; }
+.bloc-header .ht { font-size:13px; font-weight:800; color:#fff; letter-spacing:1.5px; text-transform:uppercase; }
+.bloc-header .hs { font-size:11px; color:rgba(255,255,255,0.72); font-weight:400; margin-left:4px; }
+.bloc-body { background:#fff; padding:16px 20px; }
+
+.arrow { display:flex; flex-direction:column; align-items:center; padding:5px 0; }
+.arrow-line  { width:3px; height:18px; background:#2D6A8C; }
+.arrow-head  { width:0; height:0; border-left:10px solid transparent; border-right:10px solid transparent; border-top:12px solid #2D6A8C; }
+
+/* Sources */
+.sources-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; }
+.src { border:1.5px solid #E0E8EE; border-radius:8px; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:5px; background:#FAFCFD; }
+.src .si { font-size:26px; }
+.src .sn { font-size:11.5px; font-weight:700; color:#1A3A4A; text-align:center; }
+.src .sd { font-size:10px; color:#7A909A; text-align:center; line-height:1.4; }
+.src .sb { font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:2px; }
+
+/* Ingestion */
+.ing-row { display:flex; align-items:center; justify-content:center; gap:12px; }
+.tbox { display:flex; align-items:center; gap:9px; background:#F0F5F8; border:1.5px solid #D0DCE4; border-radius:8px; padding:10px 14px; }
+.tbox .ti { font-size:22px; }
+.tbox .tn { font-size:11.5px; font-weight:700; color:#1A3A4A; }
+.tbox .ts { font-size:10px; color:#7A909A; margin-top:1px; }
+.arr-r { font-size:20px; color:#2D6A8C; font-weight:700; }
+
+/* Raw */
+.raw-row { display:flex; align-items:center; gap:14px; }
+.chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+.chip { font-size:10px; font-weight:600; padding:2px 9px; border-radius:10px; border:1.5px solid; }
+
+/* Spark */
+.spark-row { display:flex; align-items:flex-start; gap:16px; }
+.spark-l { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:60px; }
+.spark-l .spi { font-size:34px; }
+.spark-l .spn { font-size:11px; font-weight:700; color:#1A3A4A; }
+.spark-l .spv { font-size:10px; color:#7A909A; text-align:center; }
+.rules { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.rule { background:#F4F8FA; border-left:3px solid; border-radius:4px; padding:5px 9px; font-size:10.5px; color:#2A4A5A; }
+.rule .rt { font-weight:700; font-size:10px; margin-bottom:2px; }
+
+/* Clean stats */
+.clean-row { display:flex; align-items:center; gap:14px; }
+.stats-mini { display:flex; gap:10px; margin-left:auto; }
+.sm { text-align:center; background:#F4F8FA; border-radius:6px; padding:8px 12px; border:1px solid #E0E8EE; }
+.sm .sv { font-size:18px; font-weight:800; }
+.sm .sl { font-size:9px; color:#7A909A; margin-top:1px; }
+
+/* Analytique */
+.anal-row { display:flex; align-items:stretch; gap:10px; }
+.sbox { flex:1; background:#F4F8FA; border:1.5px solid #D0DCE4; border-radius:8px; padding:10px 12px; }
+.sbox .sbt { font-size:11px; font-weight:700; color:#1A3A4A; margin-bottom:5px; }
+.sbox .sbl { font-size:10px; color:#7A909A; padding:2px 0; display:flex; align-items:center; gap:5px; }
+.dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.pl { font-size:18px; color:#2D6A8C; font-weight:700; align-self:center; }
+
+/* MySQL tables */
+.mysql-wrap { margin-top:12px; padding-top:10px; border-top:1px solid #E0E8EE; }
+.mysql-title { font-size:11px; font-weight:700; color:#1D4E89; margin-bottom:7px; }
+.mysql-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+.mt { background:#F4F8FA; border:1px solid #E0E8EE; border-radius:5px; padding:5px 9px; }
+.mt .mtn { font-weight:700; color:#1A3A4A; font-family:'Consolas',monospace; font-size:10px; }
+.mt .mtc { color:#7A909A; font-size:9.5px; margin-top:1px; }
+
+/* Dashboard */
+.dash-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.dc { border:1.5px solid #E0E8EE; border-radius:8px; padding:12px 10px; background:#FAFCFD; display:flex; flex-direction:column; align-items:center; gap:5px; text-align:center; }
+.dc .di { font-size:24px; }
+.dc .dn { font-size:11.5px; font-weight:700; color:#1A3A4A; }
+.dc .ds { font-size:10px; color:#7A909A; line-height:1.4; }
+.dc .dp { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:3px; }
+</style>
+</head>
+<body>
+
+<div class="page-title">ID Immobilier — Architecture du Projet</div>
+<div class="page-sub">Pipeline Big Data · De la collecte au dashboard · Togo 2025–2026</div>
+
+<div class="flow">
+
+  <!-- 1. SOURCES -->
+  <div class="bloc">
+    <div class="bloc-header" style="background:#1D4E89;">
+      <span class="ht">Sources de Données</span>
+    </div>
+    <div class="bloc-body">
+      <div class="sources-grid">
+        <div class="src">
+          <span class="si">📊</span>
+          <div class="sn">Excel / Facebook</div>
+          <div class="sd">Collecte manuelle<br>Collaborateur</div>
+          <span class="sb" style="background:#FEE8D8;color:#B84A00;">4 540 ann.</span>
+        </div>
+        <div class="src">
+          <span class="si">🔌</span>
+          <div class="sn">ImmoAsk API</div>
+          <div class="sd">API REST structurée<br>Scraping automatique</div>
+          <span class="sb" style="background:#D8F0F2;color:#016A78;">500 / jour</span>
+        </div>
+        <div class="src">
+          <span class="si">🌐</span>
+          <div class="sn">CoinAfrique Web</div>
+          <div class="sd">BeautifulSoup<br>60 pages</div>
+          <span class="sb" style="background:#E8F5D8;color:#3A6A00;">⏸ Hebdo</span>
+        </div>
+        <div class="src">
+          <span class="si">🏛️</span>
+          <div class="sn">Valeurs Vénales OTR</div>
+          <div class="sd">Prix officiels<br>Référentiel fixe</div>
+          <span class="sb" style="background:#FEF0D8;color:#8B5500;">354 lignes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- 2. INGESTION -->
+  <div class="bloc">
+    <div class="bloc-header" style="background:#E85D04;">
+      <span class="ht">Couche Ingestion</span>
+      <span class="hs">Orchestration & Automatisation</span>
+    </div>
+    <div class="bloc-body">
+      <div class="ing-row">
+        <div class="tbox">
+          <span class="ti">⚙️</span>
+          <div><div class="tn">Apache Airflow</div><div class="ts">Orchestration DAGs<br>Schedule 06h00 UTC · Retries: 1</div></div>
+        </div>
+        <div class="arr-r">→</div>
+        <div class="tbox">
+          <span class="ti">🐍</span>
+          <div><div class="tn">ingestion.py</div><div class="ts">Sélection fichier récent<br>Ajout colonne source</div></div>
+        </div>
+        <div class="arr-r">→</div>
+        <div class="tbox">
+          <span class="ti">🐳</span>
+          <div><div class="tn">Docker Compose</div><div class="ts">4 conteneurs<br>Réseau isolé</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- 3. ZONE RAW -->
+  <div class="bloc">
+    <div class="bloc-header" style="background:#4A6A7A;">
+      <span class="ht">Zone RAW / Landing</span>
+      <span class="hs">data/raw/</span>
+    </div>
+    <div class="bloc-body">
+      <div class="raw-row">
+        <span style="font-size:34px;">📁</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#1A3A4A;">Fichiers CSV bruts stockés localement</div>
+          <div style="font-size:10.5px;color:#7A909A;margin-top:3px;">Chaque source génère un fichier horodaté · Conservé avant nettoyage</div>
+          <div class="chips">
+            <span class="chip" style="border-color:#E85D04;color:#E85D04;">immoask_20260307.csv</span>
+            <span class="chip" style="border-color:#028090;color:#028090;">coinafrique_20260307.csv</span>
+            <span class="chip" style="border-color:#8B5500;color:#8B5500;">valeurs_venales.xlsx</span>
+            <span class="chip" style="border-color:#3A6A00;color:#3A6A00;">facebook_data.xlsx</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- 4. SPARK TRAITEMENT -->
+  <div class="bloc">
+    <div class="bloc-header" style="background:#3A3A4A;">
+      <span class="ht">Couche Traitement</span>
+      <span class="hs">Apache Spark 3.5.1 / PySpark</span>
+    </div>
+    <div class="bloc-body">
+      <div class="spark-row">
+        <div class="spark-l">
+          <span class="spi">⚡</span>
+          <div class="spn">PySpark</div>
+          <div class="spv">v3.5.1<br>1 Worker<br>Docker</div>
+        </div>
+        <div class="rules">
+          <div class="rule" style="border-color:#028090;"><div class="rt" style="color:#028090;">Normalisation</div>17 types de biens standardisés</div>
+          <div class="rule" style="border-color:#E85D04;"><div class="rt" style="color:#E85D04;">Validation Prix</div>10 000 → 5 milliards FCFA</div>
+          <div class="rule" style="border-color:#3A6A00;"><div class="rt" style="color:#3A6A00;">Conversion Lots</div>1 lot = 600 m² (norme Togo)</div>
+          <div class="rule" style="border-color:#A855F7;"><div class="rt" style="color:#A855F7;">Zones</div>Déduplication lower + strip</div>
+          <div class="rule" style="border-color:#1A5C3A;"><div class="rt" style="color:#1A5C3A;">Sortie OK</div>annonces_clean.csv</div>
+          <div class="rule" style="border-color:#CC2936;"><div class="rt" style="color:#CC2936;">Sortie Rejets</div>annonces_rejetees.csv</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- 5. ZONE CLEAN -->
+  <div class="bloc">
+    <div class="bloc-header" style="background:#1A5C72;">
+      <span class="ht">Zone Clean / Silver</span>
+      <span class="hs">data/cleaned_v2/</span>
+    </div>
+    <div class="bloc-body">
+      <div class="clean-row">
+        <span style="font-size:30px;">✅</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#1A3A4A;">Données nettoyées et validées</div>
+          <div style="font-size:10.5px;color:#7A909A;margin-top:3px;">annonces_clean.csv — prêt pour modélisation MySQL</div>
+        </div>
+        <div class="stats-mini">
+          <div class="sm"><div class="sv" style="color:#02C39A;">5 262</div><div class="sl">valides</div></div>
+          <div class="sm"><div class="sv" style="color:#E85D04;">170</div><div class="sl">rejets</div></div>
+          <div class="sm"><div class="sv" style="color:#028090;">3.1%</div><div class="sl">taux rejet</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- 6. ANALYTIQUE -->
+  <div class="bloc">
+    <div class="bloc-header" style="background:#1D4E89;">
+      <span class="ht">Couche Analytique</span>
+      <span class="hs">Python + MySQL</span>
+    </div>
+    <div class="bloc-body">
+      <div class="anal-row">
+        <div class="sbox">
+          <div class="sbt">⚙️ modeling_v2.py</div>
+          <div class="sbl"><span class="dot" style="background:#A855F7;"></span>Calcul prix/m²</div>
+          <div class="sbl"><span class="dot" style="background:#A855F7;"></span>Alias sources scrapées</div>
+          <div class="sbl"><span class="dot" style="background:#A855F7;"></span>Insertion par batch</div>
+        </div>
+        <div class="pl">→</div>
+        <div class="sbox">
+          <div class="sbt">📊 indicators.py</div>
+          <div class="sbl"><span class="dot" style="background:#02C39A;"></span>Prix moyen/m² par zone</div>
+          <div class="sbl"><span class="dot" style="background:#02C39A;"></span>Médian, min, max</div>
+          <div class="sbl"><span class="dot" style="background:#02C39A;"></span>Écart vs OTR</div>
+        </div>
+        <div class="pl">→</div>
+        <div class="sbox">
+          <div class="sbt">📈 index.py</div>
+          <div class="sbl"><span class="dot" style="background:#4A8AFF;"></span>Indice ID Immobilier</div>
+          <div class="sbl"><span class="dot" style="background:#02C39A;"></span>↑ HAUSSE · → STABLE</div>
+          <div class="sbl"><span class="dot" style="background:#FF6B6B;"></span>↓ BAISSE · INCONNU</div>
+        </div>
+      </div>
+      <div class="mysql-wrap">
+        <div class="mysql-title">🗄️ MySQL — Base id_immobilier · 7 tables</div>
+        <div class="mysql-grid">
+          <div class="mt"><div class="mtn">zone_geographique</div><div class="mtc">566 zones</div></div>
+          <div class="mt"><div class="mtn">source_donnees</div><div class="mtc">4 sources</div></div>
+          <div class="mt"><div class="mtn">bien_immobilier</div><div class="mtc">—</div></div>
+          <div class="mt"><div class="mtn">annonce</div><div class="mtc">5 262 lignes</div></div>
+          <div class="mt"><div class="mtn">statistiques_zone</div><div class="mtc">1 001 stats</div></div>
+          <div class="mt"><div class="mtn">indice_immobilier</div><div class="mtc">1 163 indices</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- 7. DASHBOARD -->
+  <div class="bloc">
+    <div class="bloc-header" style="background:#E85D04;">
+      <span class="ht">Visualisation & Dashboard</span>
+    </div>
+    <div class="bloc-body">
+      <div class="dash-grid">
+        <div class="dc">
+          <span class="di">🎯</span>
+          <div class="dn">Streamlit</div>
+          <div class="ds">Dashboard principal<br>Filtres interactifs</div>
+          <span class="dp" style="background:#FFE8E0;color:#CC2936;">localhost:8501</span>
+        </div>
+        <div class="dc">
+          <span class="di">🗺️</span>
+          <div class="dn">Carte des Zones</div>
+          <div class="ds">Prix moyen/m²<br>566 quartiers Togo</div>
+          <span class="dp" style="background:#D8F0F2;color:#016A78;">Folium / PyDeck</span>
+        </div>
+        <div class="dc">
+          <span class="di">📈</span>
+          <div class="dn">Indices & Tendances</div>
+          <div class="ds">HAUSSE · STABLE · BAISSE<br>par zone et type de bien</div>
+          <span class="dp" style="background:#E8F5D8;color:#3A6A00;">Plotly Charts</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
