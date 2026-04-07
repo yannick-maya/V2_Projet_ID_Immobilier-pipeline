@@ -66,7 +66,7 @@ const Home = () => {
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {topZones.map((zone, idx) => (
               <div key={`${zone.zone}-${idx}`} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <p className="font-bold text-slate-800">#{idx + 1} {zone.zone}</p>
+                <p className="font-bold text-slate-800">{idx + 1} -{zone.zone}</p>
                 <p className="mt-1 text-sm text-slate-500">{zone.type_bien || "Tous biens"} · {zone.type_offre || "Tous"}</p>
                 <p className="mt-2 text-lg font-extrabold text-[#065A82]">{Number(zone.prix_moyen_m2 || 0).toLocaleString()} FCFA/m²</p>
                 <p className="text-xs text-slate-500">{zone.nombre_annonces || 0} annonces</p>

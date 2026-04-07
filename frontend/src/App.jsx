@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Favoris from "./pages/Favoris";
 import Home from "./pages/Home";
 import Indice from "./pages/Indice";
+import IndiceTendance from "./pages/IndiceTendance";
 import Login from "./pages/Login";
 import Profil from "./pages/Profil";
 import Register from "./pages/Register";
@@ -24,6 +25,7 @@ const App = () => (
         <Route path="/recherche" element={<Recherche />} />
         <Route path="/annonce/:id" element={<BienDetail />} />
         <Route path="/indice" element={<Indice />} />
+        <Route path="/indice/tendance/:tendance" element={<IndiceTendance />} />
         <Route path="/simulateur" element={<Simulateur />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/favoris" element={<ProtectedRoute><Favoris /></ProtectedRoute>} />

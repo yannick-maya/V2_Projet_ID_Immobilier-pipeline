@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { authApi } from "../services/api";
 
 const extractError = (err) => {
+  if (err?.message === "Network Error" || !err?.response) {
+    return "API inaccessible. Vérifie que uvicorn tourne sur http://localhost:8000";
+  }
   const detail = err?.response?.data?.detail;
   if (Array.isArray(detail)) {
     return detail.map((d) => d.msg).join(" | ");

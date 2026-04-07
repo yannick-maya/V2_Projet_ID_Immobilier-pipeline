@@ -1,11 +1,24 @@
-﻿import { useMemo, useState } from "react";
-import { scoringApi } from "../services/api";
+﻿import { useEffect, useMemo, useState } from "react";
+import { annoncesApi, scoringApi } from "../services/api";
 
 const Simulateur = () => {
   const [form, setForm] = useState({ zone: "", type_bien: "", type_offre: "VENTE", surface_m2: "", pieces: "" });
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [zones, setZones] = useState([]);
+  const [types, setTypes] = useState([]);
+
+  useEffect(() => {
+    annoncesApi.list({ page: 1, limit: 500 }).then((r) => {
+      const data = r.data.data || [];
+      setZones([...new Set(data.map((x) => x.zone).filter(Boolean))].sort());
+      setTypes([...new Set(data.map((x) => x.type_bien).filter(Boolean))].sort());
+    }).catch(() => {
+      setZones([]);
+      setTypes([]);
+    });
+  }, []);
 
   const canSubmit = useMemo(() => form.zone.trim() && form.type_bien.trim() && Number(form.surface_m2) > 0, [form]);
 
@@ -42,8 +55,14 @@ const Simulateur = () => {
       </div>
 
       <div className="grid gap-3 md:grid-cols-5">
-        <input className="input-modern" placeholder="Zone (Tokoin)" value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })} />
-        <input className="input-modern" placeholder="Type bien (Villa)" value={form.type_bien} onChange={(e) => setForm({ ...form, type_bien: e.target.value })} />
+        <select className="input-modern" value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })}>
+          <option value="">Selectionner une zone</option>
+          {zones.map((z) => <option key={z} value={z}>{z}</option>)}
+        </select>
+        <select className="input-modern" value={form.type_bien} onChange={(e) => setForm({ ...form, type_bien: e.target.value })}>
+          <option value="">Type de bien</option>
+          {types.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
         <select className="input-modern" value={form.type_offre} onChange={(e) => setForm({ ...form, type_offre: e.target.value })}>
           <option value="VENTE">VENTE</option>
           <option value="LOCATION">LOCATION</option>
