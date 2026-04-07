@@ -1,124 +1,106 @@
 """
-Phase 4 — Calcul des indicateurs statistiques
-Prix au m², moyenne/médiane par zone, écart vs valeurs vénales officielles
+Phase 4 - Calcul des indicateurs statistiques (MongoDB)
 """
 
-import pandas as pd
-import mysql.connector
 import os
+from datetime import datetime, timezone
+
 from dotenv import load_dotenv
+from pymongo import MongoClient, UpdateOne
 
 load_dotenv()
 
-DB_CONFIG = {
-    "host":     os.getenv("MYSQL_HOST", "localhost"),
-    "user":     os.getenv("MYSQL_USER", "root"),
-    "password": os.getenv("MYSQL_PASSWORD", ""),
-    "database": os.getenv("MYSQL_DB", "id_immobilier"),
-}
+
+def get_db():
+    mongo_uri = os.getenv("MONGO_URI")
+    mongo_db = os.getenv("MONGO_DB", "id_immobilier")
+    if not mongo_uri:
+        raise RuntimeError("MONGO_URI manquante dans le .env")
+    client = MongoClient(mongo_uri)
+    return client, client[mongo_db]
 
 
-def get_connection():
-    return mysql.connector.connect(**DB_CONFIG)
+def calculer_statistiques(db):
+    pipeline_agg = [
+        {"$match": {"prix_m2": {"$gt": 0}}},
+        {
+            "$group": {
+                "_id": {
+                    "zone": "$zone",
+                    "type_bien": "$type_bien",
+                    "type_offre": "$type_offre",
+                    "periode": "$periode",
+                    "annee": "$annee",
+                    "trimestre": "$trimestre",
+                },
+                "prix_moyen_m2": {"$avg": "$prix_m2"},
+                "prix_median_m2": {"$avg": "$prix_m2"},
+                "prix_min_m2": {"$min": "$prix_m2"},
+                "prix_max_m2": {"$max": "$prix_m2"},
+                "nombre_annonces": {"$sum": 1},
+            }
+        },
+    ]
+    return list(db["annonces"].aggregate(pipeline_agg))
 
 
-def calculer_statistiques(conn):
-    """Calcule les stats par zone et type de bien"""
+def upsert_statistiques(db, resultats):
+    ops = []
+    now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
-    query = """
-        SELECT
-            z.id AS id_zone,
-            z.nom AS zone,
-            b.type_bien,
-            b.type_offre,
-            a.prix_m2,
-            a.prix
-        FROM annonce a
-        JOIN bien_immobilier b ON a.id_bien = b.id
-        JOIN zone_geographique z ON b.id_zone = z.id
-        WHERE a.prix_m2 IS NOT NULL AND a.prix_m2 > 0
-    """
-
-    df = pd.read_sql(query, conn)
-
-    # Calcul des statistiques groupées
-    stats = df.groupby(["id_zone", "zone", "type_bien", "type_offre"]).agg(
-        prix_moyen_m2   = ("prix_m2", "mean"),
-        prix_median_m2  = ("prix_m2", "median"),
-        prix_min        = ("prix", "min"),
-        prix_max        = ("prix", "max"),
-        nombre_annonces = ("prix_m2", "count")
-    ).reset_index()
-
-    stats["prix_moyen_m2"]  = stats["prix_moyen_m2"].round(2)
-    stats["prix_median_m2"] = stats["prix_median_m2"].round(2)
-    stats["periode"]        = "GLOBAL"
-
-    # Calcul écart vs valeurs vénales
-    venales_query = """
-        SELECT z.nom AS zone, AVG(vv.prix_m2_officiel) AS prix_m2_officiel
-        FROM valeur_venale vv
-        JOIN zone_geographique z ON vv.id_zone = z.id
-        GROUP BY z.nom
-    """
-    df_venales = pd.read_sql(venales_query, conn)
-    stats = stats.merge(df_venales, on="zone", how="left")
-
-    # Protection division par zéro si prix_m2_officiel est 0 ou manquant
-    mask = stats["prix_m2_officiel"].notna() & (stats["prix_m2_officiel"] > 0)
-    stats["ecart_valeur_venale"] = None
-    stats.loc[mask, "ecart_valeur_venale"] = (
-        (stats.loc[mask, "prix_moyen_m2"] - stats.loc[mask, "prix_m2_officiel"])
-        / stats.loc[mask, "prix_m2_officiel"] * 100
-    ).round(2)
-
-    return stats
-
-
-def inserer_statistiques(conn, stats):
-    cursor = conn.cursor()
-    for _, row in stats.iterrows():
-        cursor.execute(
-            """INSERT INTO statistiques_zone
-               (id_zone, type_bien, type_offre, periode, prix_moyen_m2, prix_median_m2,
-                prix_min, prix_max, nombre_annonces, ecart_valeur_venale)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-            (
-                int(row["id_zone"]),
-                str(row["type_bien"]),
-                str(row["type_offre"]),
-                str(row["periode"]),
-                float(row["prix_moyen_m2"]),
-                float(row["prix_median_m2"]),
-                float(row["prix_min"]),
-                float(row["prix_max"]),
-                int(row["nombre_annonces"]),
-                float(row["ecart_valeur_venale"]) if pd.notna(row.get("ecart_valeur_venale")) else None
+    for row in resultats:
+        grp = row.get("_id", {})
+        doc = {
+            "zone": grp.get("zone"),
+            "type_bien": grp.get("type_bien"),
+            "type_offre": grp.get("type_offre"),
+            "periode": grp.get("periode"),
+            "annee": grp.get("annee"),
+            "trimestre": grp.get("trimestre"),
+            "prix_moyen_m2": round(float(row.get("prix_moyen_m2", 0)), 2),
+            "prix_median_m2": round(float(row.get("prix_median_m2", 0)), 2),
+            "prix_min_m2": round(float(row.get("prix_min_m2", 0)), 2),
+            "prix_max_m2": round(float(row.get("prix_max_m2", 0)), 2),
+            "nombre_annonces": int(row.get("nombre_annonces", 0)),
+            "updated_at": now_iso,
+        }
+        key = {
+            "zone": doc["zone"],
+            "type_bien": doc["type_bien"],
+            "type_offre": doc["type_offre"],
+            "periode": doc["periode"],
+        }
+        ops.append(
+            UpdateOne(
+                key,
+                {"$set": doc, "$setOnInsert": {"created_at": now_iso}},
+                upsert=True,
             )
         )
-    conn.commit()
-    cursor.close()
-    print(f"  {len(stats)} statistiques insérées")
 
+    if not ops:
+        return {"inserted": 0, "updated": 0, "matched": 0}
 
-def afficher_top_zones(stats):
-    print("\n TOP 5 zones les plus chères (prix moyen m²) :")
-    top = stats.sort_values("prix_moyen_m2", ascending=False).head(5)
-    print(top[["zone", "type_bien", "prix_moyen_m2", "nombre_annonces"]].to_string(index=False))
-
-    print("\n TOP 5 zones les moins chères :")
-    bottom = stats.sort_values("prix_moyen_m2").head(5)
-    print(bottom[["zone", "type_bien", "prix_moyen_m2", "nombre_annonces"]].to_string(index=False))
+    result = db["statistiques"].bulk_write(ops, ordered=False)
+    return {
+        "inserted": result.upserted_count,
+        "updated": result.modified_count,
+        "matched": result.matched_count,
+    }
 
 
 def run():
-    print("  Calcul des indicateurs...")
-    conn = get_connection()
-    stats = calculer_statistiques(conn)
-    inserer_statistiques(conn, stats)
-    afficher_top_zones(stats)
-    conn.close()
-    print("  Indicateurs calculés !")
+    print("Calcul des indicateurs MongoDB...")
+    client, db = get_db()
+    try:
+        resultats = calculer_statistiques(db)
+        logs = upsert_statistiques(db, resultats)
+        print(f"  Agrégats calculés : {len(resultats)}")
+        print(f"  Insérés           : {logs['inserted']}")
+        print(f"  Mis à jour        : {logs['updated']}")
+        print(f"  Déjà existants    : {logs['matched']}")
+    finally:
+        client.close()
 
 
 if __name__ == "__main__":

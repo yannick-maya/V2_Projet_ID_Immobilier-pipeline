@@ -1,5 +1,4 @@
-# ID Immobilier — Dépendances Python
-# Installer avec : pip install -r requirements.txt
+﻿# ID Immobilier — Dépendances Python
 
 # Data manipulation
 pandas==2.2.0
@@ -9,10 +8,16 @@ openpyxl==3.1.2
 # Big Data
 pyspark==3.5.1
 
-# Base de données MySQL
-mysql-connector-python==8.3.0
-sqlalchemy==1.4.49
+# Base de données MongoDB
+pymongo==4.11.1
+motor==3.6.1
 
+# API
+fastapi==0.115.6
+uvicorn==0.32.1
+python-jose==3.3.0
+passlib[bcrypt]==1.7.4
+email-validator==2.2.0
 
 # Orchestration
 apache-airflow==2.8.2

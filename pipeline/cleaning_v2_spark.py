@@ -181,7 +181,10 @@ def normalise_scraped_immoask(df):
             df = df.withColumnRenamed(old, new)
 
     # Garder uniquement les colonnes pipeline
-    cols = ["titre", "type_offre", "type_bien", "zone", "prix", "pieces", "surface_m2", "source"]
+    cols = [
+        "titre", "type_offre", "type_bien", "zone", "prix", "pieces", "surface_m2",
+        "source", "date_annonce", "annee", "trimestre", "periode"
+    ]
     df = df.select([c for c in cols if c in df.columns])
 
     return df
@@ -223,7 +226,10 @@ def normalise_scraped_coinafrique(df):
         if old_col in df.columns:
             df = df.withColumnRenamed(old_col, new_col)
 
-    cols = ["titre", "type_offre", "type_bien", "zone", "prix", "pieces", "surface_m2", "source"]
+    cols = [
+        "titre", "type_offre", "type_bien", "zone", "prix", "pieces", "surface_m2",
+        "source", "date_annonce", "annee", "trimestre", "periode"
+    ]
     df = df.select([c for c in cols if c in df.columns])
     return df
 
@@ -281,6 +287,11 @@ def clean_annonces_v2(spark, source_name):
 
     # Règles de rejet
     df = ajouter_raison_rejet(df)
+
+    # Garantit la propagation des colonnes temporelles pour l'indice trimestriel
+    for col_name in ["date_annonce", "annee", "trimestre", "periode"]:
+        if col_name not in df.columns:
+            df = df.withColumn(col_name, F.lit(None))
 
     df_valides = df.filter(F.col("raison_rejet").isNull()).drop("raison_rejet")
     df_rejetes = df.filter(F.col("raison_rejet").isNotNull())

@@ -28,6 +28,19 @@ SCRAPED_SOURCES = {
 }
 
 
+def add_periode_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Ajoute annee / trimestre / periode depuis date_annonce."""
+    if "date_annonce" not in df.columns:
+        df["date_annonce"] = pd.NaT
+    df["date_annonce"] = pd.to_datetime(df["date_annonce"], errors="coerce")
+    annee_courante = pd.Timestamp.now().year
+    trimestre_courant = pd.Timestamp.now().quarter
+    df["annee"] = df["date_annonce"].dt.year.fillna(annee_courante).astype(int)
+    df["trimestre"] = df["date_annonce"].dt.quarter.fillna(trimestre_courant).astype(int)
+    df["periode"] = df["annee"].astype(str) + "-Q" + df["trimestre"].astype(str)
+    return df
+
+
 def get_latest_file(pattern: str) -> Optional[str]:
     """Retourne le fichier le plus récent correspondant au pattern."""
     files = glob.glob(pattern)
@@ -51,6 +64,7 @@ def ingest_excel():
         df = pd.read_excel(path, engine="openpyxl")
         df["source"] = source_name
 
+        df = add_periode_columns(df)
         output_path = os.path.join(OUTPUT_DIR, f"{source_name.lower()}.csv")
         df.to_csv(output_path, index=False, encoding="utf-8")
 
@@ -79,6 +93,7 @@ def ingest_scraped():
         df = pd.read_csv(latest, encoding="utf-8-sig")
         df["source"] = source_name
 
+        df = add_periode_columns(df)
         output_path = os.path.join(OUTPUT_DIR, f"{source_name.lower()}.csv")
         df.to_csv(output_path, index=False, encoding="utf-8")
 

@@ -1,6 +1,4 @@
-services:
-
-  # ── Spark Master ─────────────────────────────────────────────────────────────
+﻿services:
   spark:
     image: apache/spark:3.5.1
     container_name: id_immobilier_spark
@@ -16,7 +14,6 @@ services:
     networks:
       - immo_network
 
-  # ── Spark Worker ─────────────────────────────────────────────────────────────
   spark-worker:
     image: apache/spark:3.5.1
     container_name: id_immobilier_spark_worker
@@ -33,7 +30,23 @@ services:
     depends_on:
       - spark
 
-  # ── Airflow ───────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    container_name: id_mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=id_immobilier
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - immo_network
+
   airflow:
     build:
       context: .
@@ -42,16 +55,13 @@ services:
     container_name: id_immobilier_airflow
     restart: always
     environment:
-      # SequentialExecutor compatible avec SQLite
       - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__WEBSERVER__SECRET_KEY=id_immobilier_secret
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
-      - MYSQL_HOST=host.docker.internal
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=
-      - MYSQL_DB=id_immobilier
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017}
+      - MONGO_DB=${MONGO_DB:-id_immobilier}
     ports:
       - "8081:8080"
     volumes:
@@ -78,8 +88,10 @@ services:
       - immo_network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      mongo:
+        condition: service_healthy
 
-  # ── Streamlit ─────────────────────────────────────────────────────────────────
   streamlit:
     build:
       context: .
@@ -87,11 +99,8 @@ services:
     container_name: id_immobilier_streamlit
     restart: always
     environment:
-      # Connexion vers XAMPP sur ta machine locale
-      - MYSQL_HOST=host.docker.internal
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=
-      - MYSQL_DB=id_immobilier
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017}
+      - MONGO_DB=${MONGO_DB:-id_immobilier}
     ports:
       - "8501:8501"
     volumes:
@@ -99,14 +108,14 @@ services:
       - ./data:/app/data
     networks:
       - immo_network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      mongo:
+        condition: service_healthy
 
-# ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:
   airflow_logs:
+  mongo_data:
 
-# ── Reseau interne ────────────────────────────────────────────────────────────
 networks:
   immo_network:
     driver: bridge

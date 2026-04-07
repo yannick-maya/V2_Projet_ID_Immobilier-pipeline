@@ -22,7 +22,7 @@ default_args = {
 dag = DAG(
     dag_id="id_immobilier_pipeline",
     default_args=default_args,
-    description="Pipeline ID Immobilier - Scraping -> Ingestion -> Cleaning Spark -> Modeling -> Indicateurs -> Indice",
+    description="Pipeline ID Immobilier - Scraping -> Ingestion -> Cleaning Spark -> Modeling MongoDB -> Indicateurs -> Indice",
     schedule_interval="0 6 * * *",
     catchup=False,
     tags=["immobilier", "togo", "big-data"],
@@ -93,11 +93,11 @@ task_cleaning = PythonOperator(
 # ── Tache 3 : Modelisation V2 ─────────────────────────────────────────────────
 def run_modeling():
     sys.path.insert(0, "/opt/airflow")
-    from pipeline.modeling_v2 import run
+    from pipeline.modeling_mongodb import run
     run()
 
 task_modeling = PythonOperator(
-    task_id="modeling_mysql_v2",
+    task_id="modeling_mongodb",
     python_callable=run_modeling,
     dag=dag,
 )
