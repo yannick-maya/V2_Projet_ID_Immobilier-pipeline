@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { annoncesApi, scoringApi } from "../services/api";
+import { scoringApi, statsApi } from "../services/api";
 
 const Simulateur = () => {
   const [form, setForm] = useState({ zone: "", type_bien: "", type_offre: "VENTE", surface_m2: "", pieces: "" });
@@ -10,10 +10,9 @@ const Simulateur = () => {
   const [types, setTypes] = useState([]);
 
   useEffect(() => {
-    annoncesApi.list({ page: 1, limit: 500 }).then((r) => {
-      const data = r.data.data || [];
-      setZones([...new Set(data.map((x) => x.zone).filter(Boolean))].sort());
-      setTypes([...new Set(data.map((x) => x.type_bien).filter(Boolean))].sort());
+    statsApi.options().then((r) => {
+      setZones(r.data.zones || []);
+      setTypes(r.data.types_bien || []);
     }).catch(() => {
       setZones([]);
       setTypes([]);
@@ -48,21 +47,15 @@ const Simulateur = () => {
   };
 
   return (
-    <div className="space-y-5 rounded-2xl bg-white p-6 shadow-lg">
+    <div className="space-y-5 rounded-2xl bg-white p-5 shadow-lg">
       <div>
         <h2 className="text-2xl font-bold text-[#0B3954]">Simulateur IA du prix</h2>
-        <p className="text-sm text-slate-500">Calcul dynamique basé sur les données MongoDB et les indices.</p>
+        <p className="text-sm text-slate-500">Calcul dynamique base sur les donnees MongoDB et les indices, avec suggestions depuis toute la base.</p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-5">
-        <select className="input-modern" value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })}>
-          <option value="">Selectionner une zone</option>
-          {zones.map((z) => <option key={z} value={z}>{z}</option>)}
-        </select>
-        <select className="input-modern" value={form.type_bien} onChange={(e) => setForm({ ...form, type_bien: e.target.value })}>
-          <option value="">Type de bien</option>
-          {types.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
+        <input className="input-modern" list="simulateur-zones" placeholder="Selectionner une zone" value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })} />
+        <input className="input-modern" list="simulateur-types" placeholder="Type de bien" value={form.type_bien} onChange={(e) => setForm({ ...form, type_bien: e.target.value })} />
         <select className="input-modern" value={form.type_offre} onChange={(e) => setForm({ ...form, type_offre: e.target.value })}>
           <option value="VENTE">VENTE</option>
           <option value="LOCATION">LOCATION</option>
@@ -70,6 +63,12 @@ const Simulateur = () => {
         <input className="input-modern" type="number" placeholder="Surface m2" value={form.surface_m2} onChange={(e) => setForm({ ...form, surface_m2: e.target.value })} />
         <input className="input-modern" type="number" placeholder="Pieces" value={form.pieces} onChange={(e) => setForm({ ...form, pieces: e.target.value })} />
       </div>
+      <datalist id="simulateur-zones">
+        {zones.map((z) => <option key={z} value={z} />)}
+      </datalist>
+      <datalist id="simulateur-types">
+        {types.map((t) => <option key={t} value={t} />)}
+      </datalist>
 
       <button className="btn-primary w-full md:w-auto" onClick={run} disabled={loading}>{loading ? "Calcul..." : "Estimer"}</button>
 

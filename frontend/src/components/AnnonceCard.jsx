@@ -6,7 +6,7 @@
     </div>
     <p className="text-sm text-slate-600">{annonce.zone} · {annonce.type_bien}</p>
     <p className="mt-2 text-lg font-extrabold text-[#065A82]">{Number(annonce.prix_m2 || 0).toLocaleString()} FCFA/m²</p>
-    <p className="text-sm text-slate-500">Prix total: {Number(annonce.prix || 0).toLocaleString()} FCFA</p>
+    <p className="text-sm text-slate-500">{annonce.surface_m2 ? `${Number(annonce.surface_m2).toLocaleString()} m²` : "Surface non renseignee"} · {annonce.source || "source inconnue"}</p>
     <button onClick={() => onSave?.(annonce.id)} className="mt-4 w-full rounded-xl bg-[#065A82] px-3 py-2 text-sm font-semibold text-white hover:bg-[#054b6b]">
       Sauvegarder
     </button>

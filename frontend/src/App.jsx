@@ -17,7 +17,7 @@ import Simulateur from "./pages/Simulateur";
 const App = () => (
   <div className="min-h-screen">
     <Navbar />
-    <main className="max-w-7xl mx-auto px-4 py-6">
+    <main className="mx-auto max-w-[1380px] px-3 py-4 md:px-4">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />

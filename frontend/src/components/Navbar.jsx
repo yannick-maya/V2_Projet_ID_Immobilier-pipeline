@@ -13,6 +13,7 @@ const Navbar = () => {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
         <Link to="/" className="text-xl font-extrabold text-[#065A82]">ID Immobilier</Link>
         <div className="flex flex-wrap items-center gap-2">
+          <NavLink to="/" className={linkClass}>Accueil</NavLink>
           <NavLink to="/recherche" className={linkClass}>Recherche</NavLink>
           <NavLink to="/indice" className={linkClass}>Indice</NavLink>
           <NavLink to="/simulateur" className={linkClass}>Simulateur</NavLink>

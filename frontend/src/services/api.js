@@ -26,6 +26,8 @@ export const annoncesApi = {
 
 export const statsApi = {
   list: (params) => api.get("/statistiques", { params }),
+  options: () => api.get("/statistiques/options"),
+  overview: (params) => api.get("/statistiques/overview", { params }),
 };
 
 export const indiceApi = {

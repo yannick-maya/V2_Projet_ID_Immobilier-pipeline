@@ -1,3 +1,6 @@
+import math
+from statistics import median
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -14,6 +17,30 @@ class ScoringRequest(BaseModel):
     pieces: int | None = None
 
 
+def _percentile(values: list[float], q: float) -> float:
+    if not values:
+        return 0.0
+    if len(values) == 1:
+        return values[0]
+    index = (len(values) - 1) * q
+    lower = math.floor(index)
+    upper = math.ceil(index)
+    if lower == upper:
+        return values[lower]
+    ratio = index - lower
+    return values[lower] + (values[upper] - values[lower]) * ratio
+
+
+def _robust_values(values: list[float]) -> list[float]:
+    cleaned = sorted(value for value in values if value and math.isfinite(value) and value > 0)
+    if len(cleaned) < 8:
+        return cleaned
+    lower = _percentile(cleaned, 0.05)
+    upper = _percentile(cleaned, 0.95)
+    trimmed = [value for value in cleaned if lower <= value <= upper]
+    return trimmed or cleaned
+
+
 @router.post("/")
 async def score(payload: ScoringRequest):
     query_exact = {
@@ -28,26 +55,35 @@ async def score(payload: ScoringRequest):
     }
     query_global = {"prix_m2": {"$gt": 0}}
 
-    async def avg_prix_m2(query):
-        pipeline = [
-            {"$match": query},
-            {"$group": {"_id": None, "avg": {"$avg": "$prix_m2"}, "n": {"$sum": 1}}},
-        ]
-        rows = [row async for row in db["annonces"].aggregate(pipeline)]
-        if not rows:
-            return None, 0
-        return float(rows[0].get("avg", 0)), int(rows[0].get("n", 0))
+    async def robust_prix_m2(query):
+        values = []
+        async for doc in db["annonces"].find(query, {"prix_m2": 1}):
+            try:
+                value = float(doc.get("prix_m2"))
+            except (TypeError, ValueError):
+                continue
+            if value > 0 and math.isfinite(value):
+                values.append(value)
 
-    prix_m2_ref, n = await avg_prix_m2(query_exact)
+        trimmed = _robust_values(values)
+        if not trimmed:
+            return None, 0
+        if len(trimmed) >= 5:
+            reference = float(median(trimmed))
+        else:
+            reference = float(sum(trimmed) / len(trimmed))
+        return reference, len(values)
+
+    prix_m2_ref, n = await robust_prix_m2(query_exact)
     source = "exact"
     if not prix_m2_ref:
-        prix_m2_ref, n = await avg_prix_m2(query_zone)
+        prix_m2_ref, n = await robust_prix_m2(query_zone)
         source = "zone"
     if not prix_m2_ref:
-        prix_m2_ref, n = await avg_prix_m2(query_global)
+        prix_m2_ref, n = await robust_prix_m2(query_global)
         source = "global"
     if not prix_m2_ref:
-        prix_m2_ref, n = 150000.0, 0
+        prix_m2_ref, n = 75000.0, 0
         source = "default"
 
     # Ajustement léger selon nombre de pièces
@@ -77,4 +113,3 @@ async def score(payload: ScoringRequest):
         "indice_zone": tendance,
         "indice_valeur": indice_valeur,
     }
-
