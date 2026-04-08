@@ -7,6 +7,7 @@ from api.auth.middleware import get_current_user
 from api.database import db
 from api.models.annonce import AnnonceCreate
 from api.utils import serialize_doc, utc_now_iso
+from pipeline.geo_temporal import derive_time_fields, infer_geo_hierarchy
 
 router = APIRouter()
 
@@ -69,14 +70,11 @@ async def create_annonce(payload: AnnonceCreate, user=Depends(get_current_user))
     periode = payload.periode
     date_annonce = payload.date_annonce
 
-    if not (annee and trimestre and periode):
-        try:
-            dt = datetime.fromisoformat((date_annonce or utc_now_iso()).replace("Z", "+00:00"))
-            annee = annee or dt.year
-            trimestre = trimestre or ((dt.month - 1) // 3 + 1)
-            periode = periode or f"{annee}-Q{trimestre}"
-        except ValueError:
-            pass
+    time_fields = derive_time_fields(date_annonce=date_annonce, created_at=utc_now_iso(), fallback_iso=utc_now_iso())
+    annee = annee or time_fields["annee"]
+    trimestre = trimestre or time_fields["trimestre"]
+    periode = periode or time_fields["periode"]
+    geo_fields = infer_geo_hierarchy(payload.zone)
 
     doc = payload.model_dump(exclude_none=True)
     doc.update(
@@ -84,6 +82,17 @@ async def create_annonce(payload: AnnonceCreate, user=Depends(get_current_user))
             "annee": annee,
             "trimestre": trimestre,
             "periode": periode,
+            "year_month": time_fields["year_month"],
+            "observation_year": time_fields["observation_year"],
+            "observation_month": time_fields["observation_month"],
+            "observation_quarter": time_fields["observation_quarter"],
+            "source_posted_at": time_fields["source_posted_at"],
+            "source_scraped_at": time_fields["source_scraped_at"],
+            "observation_date": time_fields["observation_date"],
+            "zone_display": geo_fields["zone_name"],
+            "zone_id": geo_fields["zone_id"],
+            "zone_slug": geo_fields["zone_slug"],
+            "geo": geo_fields["geo"],
             "created_at": utc_now_iso(),
             "created_by": user["id"],
             "statut": "en_attente",

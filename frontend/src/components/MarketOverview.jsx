@@ -12,9 +12,9 @@ const MetricCard = ({ label, value, note }) => (
 );
 
 const ChartCard = ({ title, subtitle, children, className = "" }) => (
-  <section className={`rounded-2xl border border-slate-100 bg-white p-5 shadow-md ${className}`}>
+  <section className={`rounded-2xl border border-slate-100 bg-white p-4 md:p-5 shadow-md ${className}`}>
     <div className="rounded-xl bg-[#146C8D] px-4 py-3 text-white">
-      <h3 className="text-lg font-bold">{title}</h3>
+      <h3 className="text-base font-bold md:text-lg">{title}</h3>
       {subtitle && <p className="mt-1 text-xs text-white/80">{subtitle}</p>}
     </div>
     <div className="mt-4">{children}</div>
@@ -71,7 +71,7 @@ const DonutChart = ({ rows }) => {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
-      <div className="mx-auto flex h-44 w-44 items-center justify-center rounded-full" style={{ background: `conic-gradient(${gradient || "#cbd5e1 0 100%"})` }}>
+      <div className="mx-auto flex h-36 w-36 items-center justify-center rounded-full md:h-44 md:w-44" style={{ background: `conic-gradient(${gradient || "#cbd5e1 0 100%"})` }}>
         <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
           <span className="text-xs uppercase tracking-wide text-slate-500">Sources</span>
           <span className="text-xl font-black text-[#0B3954]">{formatNumber(total)}</span>

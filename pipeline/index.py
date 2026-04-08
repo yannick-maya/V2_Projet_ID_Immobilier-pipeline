@@ -32,13 +32,19 @@ def tendance(indice):
 
 def aggreger_prix_moyens(db):
     pipeline_agg = [
-        {"$match": {"prix_m2": {"$gt": 0}}},
+        {"$match": {"prix_m2": {"$gt": 0}, "zone_id": {"$exists": True, "$ne": None}}},
         {
             "$group": {
                 "_id": {
                     "zone": "$zone",
+                    "zone_id": "$zone_id",
+                    "zone_slug": "$zone_slug",
                     "type_bien": "$type_bien",
                     "periode": "$periode",
+                    "year_month": "$year_month",
+                    "observation_year": "$observation_year",
+                    "observation_month": "$observation_month",
+                    "observation_quarter": "$observation_quarter",
                     "annee": "$annee",
                     "trimestre": "$trimestre",
                 },
@@ -55,22 +61,34 @@ def calculer_indices(rows):
     for row in rows:
         grp = row.get("_id", {})
         zone = grp.get("zone")
+        zone_id = grp.get("zone_id")
+        zone_slug = grp.get("zone_slug")
         type_bien = grp.get("type_bien")
+        year_month = grp.get("year_month")
+        observation_year = grp.get("observation_year")
+        observation_month = grp.get("observation_month")
+        observation_quarter = grp.get("observation_quarter")
         annee = grp.get("annee")
         trimestre = grp.get("trimestre")
         periode = grp.get("periode")
         prix_moyen = float(row.get("prix_moyen_m2", 0))
         nb = int(row.get("nombre_annonces", 0))
 
-        if zone is None or type_bien is None or periode is None:
+        if zone is None or zone_id is None or type_bien is None or year_month is None:
             continue
 
-        key = (zone, type_bien)
+        key = (zone_id, type_bien)
         grouped.setdefault(key, []).append(
             {
                 "zone": zone,
+                "zone_id": zone_id,
+                "zone_slug": zone_slug,
                 "type_bien": type_bien,
                 "periode": periode,
+                "year_month": year_month,
+                "observation_year": int(observation_year) if observation_year is not None else 9999,
+                "observation_month": int(observation_month) if observation_month is not None else 99,
+                "observation_quarter": int(observation_quarter) if observation_quarter is not None else 9,
                 "annee": int(annee) if annee is not None else 9999,
                 "trimestre": int(trimestre) if trimestre is not None else 9,
                 "prix_moyen_m2": round(prix_moyen, 2),
@@ -80,7 +98,7 @@ def calculer_indices(rows):
 
     documents = []
     for (_, _), values in grouped.items():
-        values = sorted(values, key=lambda x: (x["annee"], x["trimestre"]))
+        values = sorted(values, key=lambda x: (x["observation_year"], x["observation_month"]))
         prix_ref = values[0]["prix_moyen_m2"] if values else 0
         if prix_ref <= 0:
             continue
@@ -90,8 +108,14 @@ def calculer_indices(rows):
             documents.append(
                 {
                     "zone": val["zone"],
+                    "zone_id": val["zone_id"],
+                    "zone_slug": val["zone_slug"],
                     "type_bien": val["type_bien"],
                     "periode": val["periode"],
+                    "year_month": val["year_month"],
+                    "observation_year": val["observation_year"],
+                    "observation_month": val["observation_month"],
+                    "observation_quarter": val["observation_quarter"],
                     "annee": val["annee"],
                     "trimestre": val["trimestre"],
                     "prix_reference_m2": prix_ref,
@@ -109,9 +133,9 @@ def upsert_indices(db, docs):
     ops = []
     for doc in docs:
         key = {
-            "zone": doc["zone"],
+            "zone_id": doc["zone_id"],
             "type_bien": doc["type_bien"],
-            "periode": doc["periode"],
+            "year_month": doc["year_month"],
         }
         ops.append(
             UpdateOne(

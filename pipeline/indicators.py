@@ -22,14 +22,20 @@ def get_db():
 
 def calculer_statistiques(db):
     pipeline_agg = [
-        {"$match": {"prix_m2": {"$gt": 0}}},
+        {"$match": {"prix_m2": {"$gt": 0}, "zone_id": {"$exists": True, "$ne": None}}},
         {
             "$group": {
                 "_id": {
                     "zone": "$zone",
+                    "zone_id": "$zone_id",
+                    "zone_slug": "$zone_slug",
                     "type_bien": "$type_bien",
                     "type_offre": "$type_offre",
                     "periode": "$periode",
+                    "year_month": "$year_month",
+                    "observation_year": "$observation_year",
+                    "observation_month": "$observation_month",
+                    "observation_quarter": "$observation_quarter",
                     "annee": "$annee",
                     "trimestre": "$trimestre",
                 },
@@ -52,9 +58,15 @@ def upsert_statistiques(db, resultats):
         grp = row.get("_id", {})
         doc = {
             "zone": grp.get("zone"),
+            "zone_id": grp.get("zone_id"),
+            "zone_slug": grp.get("zone_slug"),
             "type_bien": grp.get("type_bien"),
             "type_offre": grp.get("type_offre"),
             "periode": grp.get("periode"),
+            "year_month": grp.get("year_month"),
+            "observation_year": grp.get("observation_year"),
+            "observation_month": grp.get("observation_month"),
+            "observation_quarter": grp.get("observation_quarter"),
             "annee": grp.get("annee"),
             "trimestre": grp.get("trimestre"),
             "prix_moyen_m2": round(float(row.get("prix_moyen_m2", 0)), 2),
@@ -65,10 +77,10 @@ def upsert_statistiques(db, resultats):
             "updated_at": now_iso,
         }
         key = {
-            "zone": doc["zone"],
+            "zone_id": doc["zone_id"],
             "type_bien": doc["type_bien"],
             "type_offre": doc["type_offre"],
-            "periode": doc["periode"],
+            "year_month": doc["year_month"],
         }
         ops.append(
             UpdateOne(

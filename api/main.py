@@ -38,9 +38,12 @@ app.add_middleware(
 async def startup_indexes():
     await db["annonces"].create_index([("titre", "text"), ("description", "text")], name="idx_text_annonces")
     await db["annonces"].create_index([("zone", 1)], name="idx_zone")
+    await db["annonces"].create_index([("zone_id", 1)], name="idx_zone_id")
     await db["annonces"].create_index([("type_bien", 1)], name="idx_type_bien")
     await db["annonces"].create_index([("periode", 1)], name="idx_periode")
+    await db["annonces"].create_index([("year_month", 1)], name="idx_year_month")
     await db["annonces"].create_index([("localisation", "2dsphere")], name="idx_localisation_2dsphere")
+    await db["zones"].create_index([("slug", 1)], name="idx_zone_slug")
 
 
 @app.get("/")

@@ -28,8 +28,8 @@ const Indice = () => {
   }, [indices, zoneFilter, typeFilter, periodeFilter]);
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
+    <div className="space-y-5">
+      <div className="rounded-2xl bg-white p-5 shadow-lg">
         <h2 className="text-2xl font-bold text-[#0B3954]">Indice immobilier par zone</h2>
         <p className="text-sm text-slate-500">Suivi des tendances de prix (HAUSSE/STABLE/BAISSE) depuis MongoDB.</p>
       </div>
@@ -42,7 +42,7 @@ const Indice = () => {
         </div>
       )}
 
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
+      <div className="rounded-2xl bg-white p-5 shadow-lg">
         <div className="mb-4 grid gap-3 md:grid-cols-3">
           <select className="input-modern" value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)}>
             {zones.map((z) => <option key={z}>{z}</option>)}
@@ -55,7 +55,27 @@ const Indice = () => {
           </select>
         </div>
 
-        <div className="overflow-auto">
+        <div className="space-y-3 md:hidden">
+          {filtered.map((i) => (
+            <div key={i.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-slate-800">{i.zone}</p>
+                  <p className="text-sm text-slate-500">{i.type_bien}</p>
+                </div>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                  i.tendance === "HAUSSE" ? "bg-red-100 text-red-700" : i.tendance === "BAISSE" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}>{i.tendance}</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-sm text-slate-600">
+                <span>{i.year_month || i.periode}</span>
+                <span className="font-bold text-[#0B3954]">{Number(i.indice_valeur || 0).toFixed(1)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden overflow-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
@@ -71,7 +91,7 @@ const Indice = () => {
                 <tr key={i.id} className="border-b last:border-0">
                   <td className="px-2 py-2">{i.zone}</td>
                   <td className="px-2 py-2">{i.type_bien}</td>
-                  <td className="px-2 py-2">{i.periode}</td>
+                  <td className="px-2 py-2">{i.year_month || i.periode}</td>
                   <td className="px-2 py-2 font-semibold">{Number(i.indice_valeur || 0).toFixed(1)}</td>
                   <td className="px-2 py-2">
                     <span className={`rounded-full px-2 py-1 text-xs font-semibold ${

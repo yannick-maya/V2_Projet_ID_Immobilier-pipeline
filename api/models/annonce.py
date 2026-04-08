@@ -14,11 +14,19 @@ class AnnonceCreate(BaseModel):
     type_bien: str
     type_offre: str
     zone: str
+    zone_id: str | None = None
+    zone_slug: str | None = None
     source: str = "user"
     periode: str | None = None
+    year_month: str | None = None
     annee: int | None = None
     trimestre: int | None = None
+    observation_year: int | None = None
+    observation_month: int | None = None
+    observation_quarter: int | None = None
     date_annonce: str | None = None
+    source_posted_at: str | None = None
+    source_scraped_at: str | None = None
     description: str | None = None
     localisation: Localisation | None = None
 

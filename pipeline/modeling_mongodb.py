@@ -14,6 +14,11 @@ import pandas as pd
 from dotenv import load_dotenv
 from pymongo import ASCENDING, MongoClient, UpdateOne
 
+try:
+    from pipeline.geo_temporal import build_zone_document, derive_time_fields, infer_geo_hierarchy, now_iso
+except ModuleNotFoundError:
+    from geo_temporal import build_zone_document, derive_time_fields, infer_geo_hierarchy, now_iso
+
 load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,19 +59,6 @@ def _to_clean_str(value: Any, upper: bool = False, lower: bool = False) -> Optio
     if lower:
         return text.lower()
     return text
-
-
-def _derive_period_fields(date_annonce: Optional[str]) -> Tuple[Optional[str], Optional[int], Optional[int]]:
-    if not date_annonce:
-        return None, None, None
-    try:
-        parsed = datetime.fromisoformat(date_annonce.replace("Z", "+00:00"))
-        year = parsed.year
-        quarter = ((parsed.month - 1) // 3) + 1
-        period = f"{year}-Q{quarter}"
-        return period, year, quarter
-    except ValueError:
-        return None, None, None
 
 
 def _build_localisation(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -111,9 +103,17 @@ def get_mongo():
 
 def create_indexes(annonces_collection) -> None:
     annonces_collection.create_index([("zone", ASCENDING)], name="idx_zone")
+    annonces_collection.create_index([("zone_id", ASCENDING)], name="idx_zone_id")
+    annonces_collection.create_index([("year_month", ASCENDING)], name="idx_year_month")
     annonces_collection.create_index([("type_bien", ASCENDING)], name="idx_type_bien")
     annonces_collection.create_index([("periode", ASCENDING)], name="idx_periode")
     annonces_collection.create_index([("localisation", "2dsphere")], name="idx_localisation_2dsphere")
+
+
+def create_zone_indexes(zones_collection) -> None:
+    zones_collection.create_index([("slug", ASCENDING)], name="idx_zone_slug", unique=True)
+    zones_collection.create_index([("city", ASCENDING)], name="idx_zone_city")
+    zones_collection.create_index([("prefecture", ASCENDING)], name="idx_zone_prefecture")
 
 
 def _row_to_document(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -126,15 +126,8 @@ def _row_to_document(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
     date_annonce = _to_clean_str(row.get("date_annonce"))
-    periode = _to_clean_str(row.get("periode"))
-    annee = _to_int(row.get("annee"))
-    trimestre = _to_int(row.get("trimestre"))
-
-    if not (periode and annee and trimestre):
-        p, y, t = _derive_period_fields(date_annonce)
-        periode = periode or p
-        annee = annee or y
-        trimestre = trimestre or t
+    time_fields = derive_time_fields(date_annonce=date_annonce, created_at=row.get("created_at"), fallback_iso=now_iso())
+    geo_fields = infer_geo_hierarchy(zone)
 
     surface_m2 = _to_float(row.get("surface_m2"))
     prix_m2 = _to_float(row.get("prix_m2"))
@@ -149,11 +142,13 @@ def _row_to_document(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "type_bien": _to_clean_str(row.get("type_bien")),
         "type_offre": _to_clean_str(row.get("type_offre"), upper=True),
         "zone": zone,
+        "zone_display": geo_fields["zone_name"],
+        "zone_id": geo_fields["zone_id"],
+        "zone_slug": geo_fields["zone_slug"],
+        "geo": geo_fields["geo"],
         "source": _to_clean_str(row.get("source"), lower=True),
-        "periode": periode,
-        "annee": annee,
-        "trimestre": trimestre,
         "date_annonce": date_annonce,
+        **time_fields,
     }
 
     localisation = _build_localisation(row)
@@ -198,7 +193,9 @@ def insert_annonces(dataset, db) -> Dict[str, int]:
     Cle d'unicite logique: titre + prix + zone
     """
     annonces_collection = db["annonces"]
+    zones_collection = db["zones"]
     create_indexes(annonces_collection)
+    create_zone_indexes(zones_collection)
 
     total_processed = 0
     total_skipped = 0
@@ -206,6 +203,7 @@ def insert_annonces(dataset, db) -> Dict[str, int]:
     total_updated = 0
     total_matched = 0
     operations: List[UpdateOne] = []
+    zone_operations: Dict[str, UpdateOne] = {}
 
     for row in _iter_input_rows(dataset):
         total_processed += 1
@@ -214,19 +212,27 @@ def insert_annonces(dataset, db) -> Dict[str, int]:
             total_skipped += 1
             continue
 
-        now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        current_iso = now_iso()
         filter_query = {
             "titre": doc["titre"],
             "prix": doc["prix"],
             "zone": doc["zone"],
         }
 
+        zone_doc = build_zone_document(doc.get("zone_display") or doc["zone"])
+        if zone_doc and zone_doc["_id"] not in zone_operations:
+            zone_operations[zone_doc["_id"]] = UpdateOne(
+                {"_id": zone_doc["_id"]},
+                {"$set": zone_doc, "$setOnInsert": {"created_at": current_iso}},
+                upsert=True,
+            )
+
         operations.append(
             UpdateOne(
                 filter_query,
                 {
                     "$set": doc,
-                    "$setOnInsert": {"created_at": now_iso},
+                    "$setOnInsert": {"created_at": current_iso},
                 },
                 upsert=True,
             )
@@ -238,11 +244,16 @@ def insert_annonces(dataset, db) -> Dict[str, int]:
             total_updated += updated
             total_matched += matched
             operations = []
+            if zone_operations:
+                zones_collection.bulk_write(list(zone_operations.values()), ordered=False)
+                zone_operations = {}
 
     inserted, updated, matched = _flush_batch(annonces_collection, operations)
     total_inserted += inserted
     total_updated += updated
     total_matched += matched
+    if zone_operations:
+        zones_collection.bulk_write(list(zone_operations.values()), ordered=False)
 
     logs = {
         "processed": total_processed,

@@ -10,6 +10,7 @@ router = APIRouter()
 async def list_indices(
     zone: str | None = None,
     periode: str | None = None,
+    year_month: str | None = None,
     tendance: str | None = None,
 ):
     query = {}
@@ -17,10 +18,12 @@ async def list_indices(
         query["zone"] = zone
     if periode:
         query["periode"] = periode
+    if year_month:
+        query["year_month"] = year_month
     if tendance:
         query["tendance"] = tendance
 
-    data = [serialize_doc(d) async for d in db["indices"].find(query)]
+    data = [serialize_doc(d) async for d in db["indices"].find(query).sort([("observation_year", 1), ("observation_month", 1), ("zone", 1)])]
     return {"total": len(data), "data": data}
 
 
@@ -44,5 +47,5 @@ async def tendances_resume():
 @router.get("/{zone}")
 async def indice_zone(zone: str):
     data = [serialize_doc(d) async for d in db["indices"].find({"zone": zone})]
-    data.sort(key=lambda x: (x.get("annee", 0), x.get("trimestre", 0)))
+    data.sort(key=lambda x: (x.get("observation_year", x.get("annee", 0)), x.get("observation_month", 0), x.get("trimestre", 0)))
     return {"zone": zone, "historique": data}

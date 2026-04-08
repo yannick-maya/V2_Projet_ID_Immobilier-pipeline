@@ -10,8 +10,8 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-        <Link to="/" className="text-xl font-extrabold text-[#065A82]">ID Immobilier</Link>
+      <div className="mx-auto flex max-w-[1380px] flex-col gap-3 px-3 py-3 md:flex-row md:items-center md:justify-between md:px-4">
+        <Link to="/" className="text-lg font-extrabold text-[#065A82] md:text-xl">ID Immobilier</Link>
         <div className="flex flex-wrap items-center gap-2">
           <NavLink to="/" className={linkClass}>Accueil</NavLink>
           <NavLink to="/recherche" className={linkClass}>Recherche</NavLink>

@@ -105,11 +105,13 @@ def _group_market_data(rows: list[dict], field: str, min_count: int = 3) -> list
 async def statistics_options():
     annonces = db["annonces"]
     indices = db["indices"]
+    zones_collection = db["zones"]
 
-    zones = _clean_text(await annonces.distinct("zone"))
+    zones = _clean_text(await zones_collection.distinct("name")) or _clean_text(await annonces.distinct("zone"))
     types_bien = _clean_text(await annonces.distinct("type_bien"))
     types_offre = _clean_text(await annonces.distinct("type_offre"))
     periodes = _clean_text(
+        list(await annonces.distinct("year_month")) +
         list(await annonces.distinct("periode")) +
         list(await indices.distinct("periode")) +
         list(await db["statistiques"].distinct("periode"))
@@ -172,7 +174,7 @@ async def statistiques_overview(
         if trend in trend_counts and zone_name:
             trend_counts[trend].add(zone_name)
 
-    valid_periods = _clean_text([row.get("periode") for row in annonces])
+    valid_periods = _clean_text([row.get("year_month") or row.get("periode") for row in annonces])
     invalid_periods = sum(1 for row in annonces if str(row.get("periode") or "").strip().lower() == "nan")
 
     return {
