@@ -47,6 +47,27 @@
     networks:
       - immo_network
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: id_immobilier_api
+    restart: always
+    environment:
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017}
+      - MONGO_DB=${MONGO_DB:-id_immobilier}
+      - JWT_SECRET=${JWT_SECRET:-change_me_super_secret}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-1440}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001}
+    ports:
+      - "8000:8000"
+    networks:
+      - immo_network
+    depends_on:
+      mongo:
+        condition: service_healthy
+
   airflow:
     build:
       context: .
@@ -62,6 +83,7 @@
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
       - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017}
       - MONGO_DB=${MONGO_DB:-id_immobilier}
+      - USE_SPARK=true
     ports:
       - "8081:8080"
     volumes:
@@ -91,6 +113,8 @@
     depends_on:
       mongo:
         condition: service_healthy
+      spark:
+        condition: service_started
 
   streamlit:
     build:
@@ -111,6 +135,38 @@
     depends_on:
       mongo:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        REACT_APP_API_URL: http://localhost:8000
+    container_name: id_immobilier_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - immo_network
+    depends_on:
+      api:
+        condition: service_started
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+      args:
+        REACT_APP_API_URL: http://localhost:8000
+    container_name: id_immobilier_admin
+    restart: always
+    ports:
+      - "3001:3001"
+    networks:
+      - immo_network
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   airflow_logs:

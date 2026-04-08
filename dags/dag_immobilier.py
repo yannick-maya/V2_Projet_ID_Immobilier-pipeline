@@ -22,7 +22,7 @@ default_args = {
 dag = DAG(
     dag_id="id_immobilier_pipeline",
     default_args=default_args,
-    description="Pipeline ID Immobilier - Scraping -> Ingestion -> Cleaning Spark -> Modeling MongoDB -> Indicateurs -> Indice",
+    description="Pipeline ID Immobilier - Scraping -> Ingestion -> Cleaning Spark -> Modeling MongoDB -> Migration v2 -> Indicateurs -> Indice",
     schedule_interval="0 6 * * *",
     catchup=False,
     tags=["immobilier", "togo", "big-data"],
@@ -102,7 +102,19 @@ task_modeling = PythonOperator(
     dag=dag,
 )
 
-# ── Tache 4 : Calcul des indicateurs ─────────────────────────────────────────
+# ── Tache 4 : Migration MongoDB v2 ───────────────────────────────────────────
+def run_migration_v2():
+    sys.path.insert(0, "/opt/airflow")
+    from pipeline.migrate_mongodb_v2 import run
+    run()
+
+task_migration_v2 = PythonOperator(
+    task_id="migration_mongodb_v2",
+    python_callable=run_migration_v2,
+    dag=dag,
+)
+
+# ── Tache 5 : Calcul des indicateurs ─────────────────────────────────────────
 def run_indicators():
     sys.path.insert(0, "/opt/airflow")
     from pipeline.indicators import run
@@ -114,7 +126,7 @@ task_indicators = PythonOperator(
     dag=dag,
 )
 
-# ── Tache 5 : Calcul de l indice ─────────────────────────────────────────────
+# ── Tache 6 : Calcul de l indice ─────────────────────────────────────────────
 def run_index():
     sys.path.insert(0, "/opt/airflow")
     from pipeline.index import run
@@ -136,10 +148,12 @@ task_index = PythonOperator(
 #         ↓
 #   cleaning_pyspark_v2
 #         ↓
-#   modeling_mysql_v2
+#   modeling_mongodb
+#         ↓
+#   migration_mongodb_v2
 #         ↓
 #   calcul_indicateurs
 #         ↓
 #   calcul_indice
 #
-task_scraping >> task_ingestion >> task_nettoyage >> task_cleaning >> task_modeling >> task_indicators >> task_index
+task_scraping >> task_ingestion >> task_nettoyage >> task_cleaning >> task_modeling >> task_migration_v2 >> task_indicators >> task_index

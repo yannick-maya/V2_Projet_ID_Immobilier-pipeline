@@ -10,4 +10,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export const adminAuth = {
+  login: (payload) => api.post("/auth/login", payload),
+  me: () => api.get("/auth/me"),
+};
+
 export default api;
