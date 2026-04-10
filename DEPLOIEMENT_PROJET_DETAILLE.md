@@ -213,3 +213,15 @@ Fonctionnement:
 ---
 
 En cas de doute, refaire d'abord la validation locale complete (section 4), puis deployer.
+
+
+# lien render: 
+https://projet-id-immobilier-pipeline.onrender.com
+
+# lien admin 
+https://admin-id-immobilier-pipeline.vercel.app
+
+# lien dashbord 
+https://dashbordadmin-id-immobilier-pipelin.vercel.app/login
+
+# lien streamlit
