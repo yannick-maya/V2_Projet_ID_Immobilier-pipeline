@@ -9,7 +9,7 @@ openpyxl==3.1.2
 pyspark==3.5.1
 
 # Base de données MongoDB
-pymongo==4.11.1
+pymongo==4.9.2
 motor==3.6.1
 
 # API
