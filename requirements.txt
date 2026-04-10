@@ -13,14 +13,15 @@ pymongo==4.9.2
 motor==3.6.1
 
 # API
-fastapi==0.115.6
+fastapi==0.95.2
 uvicorn==0.32.1
 python-jose==3.3.0
 passlib[bcrypt]==1.7.4
+pydantic==1.10.13
+email-validator>=1.0.5,<2
 
 # Orchestration
 apache-airflow==2.8.2
-email-validator>=1.0.5,<2
 
 # Dashboard & Visualisation
 streamlit>=1.40.0
