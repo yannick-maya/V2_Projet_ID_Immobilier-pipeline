@@ -20,12 +20,13 @@ passlib[bcrypt]==1.7.4
 
 # Orchestration
 apache-airflow==2.8.2
+email-validator>=1.0.5,<2
 
 # Dashboard & Visualisation
-streamlit==1.32.0
-plotly==5.19.0
-folium==0.16.0
-streamlit-folium==0.19.0
+streamlit>=1.40.0
+plotly>=5.19.0
+folium>=0.16.0
+streamlit-folium>=0.19.0
 
 # Utilitaires
 python-dotenv==1.0.1
