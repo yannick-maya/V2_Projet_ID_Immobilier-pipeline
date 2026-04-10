@@ -2,7 +2,7 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Installer les dépendances système
+# Installer dépendances système nécessaires pour pandas/numpy
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y \
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY api/ ./api/
 COPY pipeline/ ./pipeline/
