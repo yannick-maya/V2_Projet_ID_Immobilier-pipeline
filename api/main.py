@@ -20,7 +20,7 @@ app = FastAPI(
 
 cors_origins = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001",
+    "https://id-immobilier.vercel.app,https://dashbordadmin-id-immobilier-pipelin.vercel.app,https://admin-id-immobilier-pipeline.vercel.app,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001",
 )
 allow_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
 
