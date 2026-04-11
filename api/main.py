@@ -11,6 +11,8 @@ from api.routers.favoris import router as favoris_router
 from api.routers.indice import router as indice_router
 from api.routers.scoring import router as scoring_router
 from api.routers.statistiques import router as stats_router
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="ID Immobilier API",
@@ -18,20 +20,22 @@ app = FastAPI(
     version="2.0.0",
 )
 
-cors_origins = os.getenv(
-    "CORS_ORIGINS",
-    "https://id-immobilier.vercel.app,https://dashbordadmin-id-immobilier-pipelin.vercel.app,https://admin-id-immobilier-pipeline.vercel.app,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001",
-)
-allow_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allow_origins,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_origins=[
+        "https://id-immobilier.vercel.app",
+        "https://dashbordadmin-id-immobilier-pipelin.vercel.app",
+        "https://admin-id-immobilier-pipeline.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 @app.on_event("startup")
