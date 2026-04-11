@@ -222,7 +222,7 @@ https://projet-id-immobilier-pipeline.onrender.com
 https://admin-id-immobilier-pipeline.vercel.app
 
 # lien dashbord 
-https://dashbordadmin-id-immobilier-pipelin.vercel.app/login
+https://dashbordadmin-id-immobilier-pipelin.vercel.app
 
 # lien user
 https://id-immobilier.vercel.app/

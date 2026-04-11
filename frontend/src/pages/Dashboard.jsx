@@ -78,7 +78,7 @@ const Dashboard = () => {
       <div className="grid gap-6 md:grid-cols-2">
         {/* Graphique prix par zone */}
         <div className="bg-white p-6 rounded-2xl shadow-lg">
-          <h3 className="text-lg font-bold text-[#0B3954] mb-4">📊 Prix moyens par zone</h3>
+          <h3 className="text-lg font-bold text-[#0B3954] mb-4"> Prix moyens par zone</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -92,7 +92,7 @@ const Dashboard = () => {
 
         {/* Distribution par type */}
         <div className="bg-white p-6 rounded-2xl shadow-lg">
-          <h3 className="text-lg font-bold text-[#0B3954] mb-4">🏠 Distribution par type</h3>
+          <h3 className="text-lg font-bold text-[#0B3954] mb-4"> Distribution par type</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie data={typeData} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name}: ${value}`} outerRadius={80} fill="#8884d8" dataKey="value">

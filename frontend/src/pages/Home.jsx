@@ -29,7 +29,7 @@ const Home = () => {
             {hasUser ? (
               <Link to="/dashboard" className="rounded-xl border border-white/35 bg-white/10 px-5 py-3 font-semibold text-white hover:bg-white/20">Ouvrir mon accueil</Link>
             ) : (
-              <Link to="/login" className="rounded-xl border border-white/35 bg-white/10 px-5 py-3 font-semibold text-white hover:bg-white/20">Se connecter pour plus de graphiques</Link>
+              <Link to="/login" className="rounded-xl border border-white/35 bg-white/10 px-5 py-3 font-semibold text-white hover:bg-white/20">Se connecter pour plus d'observations experimentales</Link>
             )}
           </div>
         </div>
