@@ -55,21 +55,21 @@ MONGO_DB=id_immobilier
 JWT_SECRET=...
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=1440
-CORS_ORIGINS=http://localhost:3000,http://localhost:3001,https://ton-frontend.vercel.app,https://ton-admin.vercel.app
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001,https://projet-id-immobilier-frontend.vercel.app,https://projet-id-immobilier-admin.vercel.app
 ```
 
 ## 3.2 Frontend `.env`
 Dans `frontend/.env`:
 
 ```env
-REACT_APP_API_URL=https://ton-api.onrender.com
+REACT_APP_API_URL=https://projet-id-immobilier-pipeline.onrender.com
 ```
 
 ## 3.3 Admin `.env`
 Dans `admin/.env`:
 
 ```env
-REACT_APP_API_URL=https://ton-api.onrender.com
+REACT_APP_API_URL=https://projet-id-immobilier-pipeline.onrender.com
 ```
 
 ## 4. Validation locale complete
@@ -125,7 +125,7 @@ Ajouter:
 - `JWT_SECRET`
 - `JWT_ALGORITHM=HS256`
 - `JWT_EXPIRE_MINUTES=1440`
-- `CORS_ORIGINS=https://ton-frontend.vercel.app,https://ton-admin.vercel.app`
+- `CORS_ORIGINS=https://projet-id-immobilier-frontend.vercel.app,https://projet-id-immobilier-admin.vercel.app`
 
 ### 5.4 Test API deployee
 - `GET /` doit retourner status `ok`
@@ -139,7 +139,7 @@ Ajouter:
 3. Root: `frontend`.
 4. Build command: `npm run build`.
 5. Output: `build`.
-6. Env var: `REACT_APP_API_URL=https://ton-api.onrender.com`.
+6. Env var: `REACT_APP_API_URL=https://projet-id-immobilier-pipelineid-immobilier-pipeline.onrender.com`.
 7. Deploy.
 
 ## 7. Deploiement Admin sur Vercel
@@ -148,7 +148,7 @@ Ajouter:
 2. Root: `admin`.
 3. Build command: `npm run build`.
 4. Output: `build`.
-5. Env var: `REACT_APP_API_URL=https://ton-api.onrender.com`.
+5. Env var: `REACT_APP_API_URL=https://projet-id-immobilier-pipeline.onrender.com`.
 6. Deploy.
 
 ## 8. CORS en production
@@ -159,7 +159,7 @@ Dans backend (`CORS_ORIGINS`):
 - optionnellement localhost pour debug
 
 Exemple:
-`CORS_ORIGINS=https://id-immo-frontend.vercel.app,https://id-immo-admin.vercel.app`
+`CORS_ORIGINS=https://projet-id-immobilier-frontend.vercel.app,https://projet-id-immobilier-admin.vercel.app`
 
 ## 9. CI/CD GitHub Actions
 
@@ -224,4 +224,7 @@ https://admin-id-immobilier-pipeline.vercel.app
 # lien dashbord 
 https://dashbordadmin-id-immobilier-pipelin.vercel.app/login
 
-# lien streamlit
+# lien user
+https://id-immobilier.vercel.app/
+
+> Note: `REACT_APP_API_URL` doit être l’URL de votre backend Render, par exemple `https://projet-id-immobilier-pipeline.onrender.com`, et non pas l’URL de webhook Render (`https://api.render.com/deploy/...`).

@@ -1,7 +1,15 @@
 ﻿import axios from "axios";
 
+const getApiBaseUrl = () => {
+  const envUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
+  return envUrl
+    .split(",")
+    .map((url) => url.trim())
+    .find((url) => url.length > 0) || "http://localhost:8000";
+};
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000",
+  baseURL: getApiBaseUrl(),
 });
 
 api.interceptors.request.use((config) => {
