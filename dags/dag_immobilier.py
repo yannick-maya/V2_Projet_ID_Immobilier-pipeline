@@ -90,6 +90,18 @@ task_cleaning = PythonOperator(
     execution_timeout=timedelta(minutes=45),
 )
 
+# ── Tache 3a : Chargement OTR ───────────────────────────────────────────────
+def run_load_otr():
+    sys.path.insert(0, "/opt/airflow")
+    from pipeline.load_otr import load_otr
+    load_otr()
+
+task_load_otr = PythonOperator(
+    task_id="chargement_otr",
+    python_callable=run_load_otr,
+    dag=dag,
+)
+
 # ── Tache 3 : Modelisation V2 ─────────────────────────────────────────────────
 def run_modeling():
     sys.path.insert(0, "/opt/airflow")
@@ -99,6 +111,18 @@ def run_modeling():
 task_modeling = PythonOperator(
     task_id="modeling_mongodb",
     python_callable=run_modeling,
+    dag=dag,
+)
+
+# ── Tache 3b : Mise à jour OTR annonces existantes ───────────────────────────
+def run_update_otr():
+    sys.path.insert(0, "/opt/airflow")
+    from pipeline.update_otr import update_annonces_otr
+    update_annonces_otr()
+
+task_update_otr = PythonOperator(
+    task_id="update_otr_annonces",
+    python_callable=run_update_otr,
     dag=dag,
 )
 
@@ -148,7 +172,11 @@ task_index = PythonOperator(
 #         ↓
 #   cleaning_pyspark_v2
 #         ↓
+#   chargement_otr
+#         ↓
 #   modeling_mongodb
+#         ↓
+#   update_otr_annonces
 #         ↓
 #   migration_mongodb_v2
 #         ↓
@@ -156,4 +184,4 @@ task_index = PythonOperator(
 #         ↓
 #   calcul_indice
 #
-task_scraping >> task_ingestion >> task_nettoyage >> task_cleaning >> task_modeling >> task_migration_v2 >> task_indicators >> task_index
+task_scraping >> task_ingestion >> task_nettoyage >> task_cleaning >> task_load_otr >> task_modeling >> task_update_otr >> task_migration_v2 >> task_indicators >> task_index
