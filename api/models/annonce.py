@@ -29,6 +29,9 @@ class AnnonceCreate(BaseModel):
     source_scraped_at: str | None = None
     description: str | None = None
     localisation: Localisation | None = None
+    prix_otr: float | None = None  # Prix officiel OTR pour terrains
+    difference_otr: float | None = None  # Différence en pourcentage par rapport à OTR
+    statut_otr: str | None = None  # "sous-evalue", "sur-evalue", "conforme"
 
 
 class AnnonceResponse(AnnonceCreate):

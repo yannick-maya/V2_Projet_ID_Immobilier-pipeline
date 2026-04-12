@@ -116,7 +116,7 @@ def create_zone_indexes(zones_collection) -> None:
     zones_collection.create_index([("prefecture", ASCENDING)], name="idx_zone_prefecture")
 
 
-def _row_to_document(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _row_to_document(row: Dict[str, Any], db) -> Optional[Dict[str, Any]]:
     titre = _to_clean_str(row.get("titre"))
     zone = _to_clean_str(row.get("zone"))
     prix = _to_float(row.get("prix"))
@@ -154,6 +154,28 @@ def _row_to_document(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     localisation = _build_localisation(row)
     if localisation is not None:
         document["localisation"] = localisation
+
+    # Ajouter comparaison OTR pour les terrains
+    type_bien = document.get("type_bien")
+    if type_bien and type_bien.upper() == "TERRAIN":
+        prefecture = geo_fields.get("prefecture", "").upper()
+        zone_geo = geo_fields.get("zone", "").upper()
+        quartier = geo_fields.get("quartier", "").upper()
+        if prefecture and zone_geo and quartier:
+            zone_key = f"{prefecture}_{zone_geo}_{quartier}"
+            otr_doc = db["valeurs_venales"].find_one({"zone_key": zone_key, "type_bien": "TERRAIN"})
+            if otr_doc:
+                prix_otr = otr_doc.get("valeur_venale")
+                if prix_otr:
+                    document["prix_otr"] = prix_otr
+                    difference = ((prix - prix_otr) / prix_otr) * 100
+                    document["difference_otr"] = round(difference, 2)
+                    if difference < -10:
+                        document["statut_otr"] = "sous-evalue"
+                    elif difference > 10:
+                        document["statut_otr"] = "sur-evalue"
+                    else:
+                        document["statut_otr"] = "conforme"
 
     # Nettoyage des champs None
     return {k: v for k, v in document.items() if v is not None}
@@ -207,7 +229,7 @@ def insert_annonces(dataset, db) -> Dict[str, int]:
 
     for row in _iter_input_rows(dataset):
         total_processed += 1
-        doc = _row_to_document(row)
+        doc = _row_to_document(row, db)
         if doc is None:
             total_skipped += 1
             continue
