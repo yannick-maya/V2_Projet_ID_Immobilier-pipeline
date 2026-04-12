@@ -54,17 +54,66 @@ async def refuser_annonce(id: str, admin=Depends(get_current_admin)):
 
 @router.get("/stats")
 async def platform_stats(admin=Depends(get_current_admin)):
+    # Récupérer les statistiques générales
     nb_users = await db["users"].count_documents({})
+
+    # Pipeline pour compter les annonces par statut
     pipeline = [
         {"$group": {"_id": "$statut", "count": {"$sum": 1}}}
     ]
     counts = {row["_id"] or "inconnu": row["count"] async for row in db["annonces"].aggregate(pipeline)}
+
+    # Récupérer les données de l'overview public
+    from api.routers.statistiques import statistiques_overview
+    overview_data = await statistiques_overview()
+
+    # Statistiques temporelles (derniers 30 jours)
+    from datetime import datetime, timedelta
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+
+    pipeline_time = [
+        {"$match": {"created_at": {"$gte": thirty_days_ago.isoformat()}}},
+        {"$group": {
+            "_id": {
+                "$dateToString": {"format": "%Y-%m-%d", "date": {"$dateFromString": {"dateString": "$created_at"}}}
+            },
+            "count": {"$sum": 1},
+            "prix_moyen": {"$avg": "$prix"}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+
+    time_series = {}
+    async for row in db["annonces"].aggregate(pipeline_time):
+        date = row["_id"]
+        if date:
+            time_series[date] = {
+                "count": row["count"],
+                "prix_moyen": round(row.get("prix_moyen", 0), 2)
+            }
+
+    # Statistiques OTR
+    pipeline_otr = [
+        {"$match": {"prix_otr": {"$exists": True}}},
+        {"$group": {
+            "_id": "$statut_otr",
+            "count": {"$sum": 1}
+        }}
+    ]
+
+    otr_stats = {}
+    async for row in db["annonces"].aggregate(pipeline_otr):
+        statut = row["_id"] or "non_evalue"
+        otr_stats[statut] = row["count"]
 
     return {
         "nb_users": nb_users,
         "nb_annonces_par_statut": counts,
         "nb_connexions_aujourdhui": 0,
         "taux_rejet_pipeline": 0,
+        "overview": overview_data,
+        "statistiques_par_jour": time_series,
+        "statistiques_otr": otr_stats,
     }
 
 

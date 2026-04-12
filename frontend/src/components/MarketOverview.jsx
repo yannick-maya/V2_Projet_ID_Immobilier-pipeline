@@ -161,8 +161,8 @@ const MarketOverview = ({ overview, compact = false, isAuthenticated = false }) 
 
         <div className="space-y-5">
           {!compact && (
-            <ChartCard title="Répartition par source">
-              {sources.length ? <DonutChart rows={sources} /> : <p className="text-sm text-slate-500">Aucune source disponible.</p>}
+            <ChartCard title="Répartition par type de bien">
+              {propertyTypes.length ? <DonutChart rows={propertyTypes.map(pt => ({ label: pt.label, count: pt.count }))} /> : <p className="text-sm text-slate-500">Aucune donnée disponible.</p>}
             </ChartCard>
           )}
 
