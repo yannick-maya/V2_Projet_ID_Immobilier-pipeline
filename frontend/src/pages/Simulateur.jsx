@@ -4,6 +4,7 @@ import { scoringApi, statsApi } from "../services/api";
 const Simulateur = () => {
   const [form, setForm] = useState({ zone: "", type_bien: "", type_offre: "VENTE", surface_m2: "", pieces: "" });
   const [result, setResult] = useState(null);
+  const [marketSnapshot, setMarketSnapshot] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [zones, setZones] = useState([]);
@@ -18,6 +19,18 @@ const Simulateur = () => {
       setTypes([]);
     });
   }, []);
+
+  useEffect(() => {
+    if (!form.zone.trim() || !form.type_bien.trim()) {
+      setMarketSnapshot(null);
+      return;
+    }
+
+    statsApi
+      .overview({ zone: form.zone.trim(), type_bien: form.type_bien.trim(), type_offre: form.type_offre })
+      .then((res) => setMarketSnapshot(res.data))
+      .catch(() => setMarketSnapshot(null));
+  }, [form.zone, form.type_bien, form.type_offre]);
 
   const canSubmit = useMemo(() => form.zone.trim() && form.type_bien.trim() && Number(form.surface_m2) > 0, [form]);
 
@@ -49,8 +62,10 @@ const Simulateur = () => {
   return (
     <div className="space-y-5 rounded-2xl bg-white p-5 shadow-lg">
       <div>
-        <h2 className="text-2xl font-bold text-[#0B3954]">Simulateur IA du prix</h2>
-        <p className="text-sm text-slate-500">Calcul dynamique base sur les donnees MongoDB et les indices, avec suggestions depuis toute la base.</p>
+        <h2 className="text-2xl font-bold text-[#0B3954]">Simulateur du prix de reference</h2>
+        <p className="text-sm text-slate-500">
+          Estimation a partir des donnees observees dans la zone, du type de bien, de la surface, des tendances et des distributions de prix.
+        </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-5">
@@ -74,6 +89,23 @@ const Simulateur = () => {
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
+      {marketSnapshot && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="card-kpi">
+            <p className="kpi-label">Prix moyen / m²</p>
+            <p className="kpi-value">{Number(marketSnapshot.kpis?.prix_moyen_m2 || 0).toLocaleString("fr-FR")} FCFA</p>
+          </div>
+          <div className="card-kpi">
+            <p className="kpi-label">Prix median / m²</p>
+            <p className="kpi-value">{Number(marketSnapshot.kpis?.prix_median_m2 || 0).toLocaleString("fr-FR")} FCFA</p>
+          </div>
+          <div className="card-kpi">
+            <p className="kpi-label">Sources comparees</p>
+            <p className="kpi-value">{marketSnapshot.kpis?.sources || 0}</p>
+          </div>
+        </div>
+      )}
+
       {result && (
         <div className="grid gap-4 md:grid-cols-2">
           <div className="card-kpi">
@@ -88,8 +120,18 @@ const Simulateur = () => {
             <p className="kpi-value">{result.indice_zone}</p>
             <p className="mt-1 text-xs text-slate-500">Indice valeur: {Number(result.indice_valeur || 100).toFixed(1)}</p>
           </div>
+          <div className="card-kpi">
+            <p className="kpi-label">Prix de reference / m²</p>
+            <p className="kpi-value">{Number(result.prix_m2_reference || 0).toLocaleString("fr-FR")} FCFA</p>
+            <p className="mt-1 text-xs text-slate-500">Source: {result.source_reference}</p>
+          </div>
+          <div className="card-kpi">
+            <p className="kpi-label">Observations utilisees</p>
+            <p className="kpi-value">{result.observations || 0}</p>
+            <p className="mt-1 text-xs text-slate-500">Base de calcul locale, zone ou globale selon disponibilite</p>
+          </div>
           <div className="rounded-xl bg-[#F0F7FB] p-4 md:col-span-2 text-sm text-slate-700">
-            Base: {result.source_reference} · Observations: {result.observations} · Ref: {Number(result.prix_m2_reference || 0).toLocaleString()} FCFA/m²
+            Le simulateur combine la reference statistique disponible avec la surface et le nombre de pieces. Utilise cette estimation comme base de discussion et non comme prix contractuel final.
           </div>
         </div>
       )}

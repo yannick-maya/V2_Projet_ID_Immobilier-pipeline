@@ -1,21 +1,20 @@
-from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.auth.middleware import get_current_user
 from api.database import db
-from api.utils import serialize_doc
+from api.utils import parse_object_id, serialize_doc
 
 router = APIRouter()
 
 
 @router.get("/")
 async def list_favoris(user=Depends(get_current_user)):
-    user_doc = await db["users"].find_one({"_id": ObjectId(user["id"])})
+    user_doc = await db["users"].find_one({"_id": parse_object_id(user["id"])})
     favoris = user_doc.get("favoris", []) if user_doc else []
     object_ids = []
     for fav in favoris:
         try:
-            object_ids.append(ObjectId(fav))
+            object_ids.append(parse_object_id(fav))
         except Exception:
             continue
 
@@ -25,15 +24,26 @@ async def list_favoris(user=Depends(get_current_user)):
 
 @router.post("/{annonce_id}")
 async def add_favori(annonce_id: str, user=Depends(get_current_user)):
-    annonce = await db["annonces"].find_one({"_id": ObjectId(annonce_id)})
+    try:
+        annonce_object_id = parse_object_id(annonce_id)
+        user_object_id = parse_object_id(user["id"])
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Identifiant invalide")
+
+    annonce = await db["annonces"].find_one({"_id": annonce_object_id})
     if not annonce:
         raise HTTPException(status_code=404, detail="Annonce introuvable")
 
-    await db["users"].update_one({"_id": ObjectId(user["id"])}, {"$addToSet": {"favoris": annonce_id}})
+    await db["users"].update_one({"_id": user_object_id}, {"$addToSet": {"favoris": annonce_id}})
     return {"message": "Favori ajouté"}
 
 
 @router.delete("/{annonce_id}")
 async def remove_favori(annonce_id: str, user=Depends(get_current_user)):
-    await db["users"].update_one({"_id": ObjectId(user["id"])}, {"$pull": {"favoris": annonce_id}})
+    try:
+        user_object_id = parse_object_id(user["id"])
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Identifiant utilisateur invalide")
+
+    await db["users"].update_one({"_id": user_object_id}, {"$pull": {"favoris": annonce_id}})
     return {"message": "Favori retiré"}

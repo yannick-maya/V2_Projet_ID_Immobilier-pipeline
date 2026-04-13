@@ -126,7 +126,16 @@ def _row_to_document(row: Dict[str, Any], db) -> Optional[Dict[str, Any]]:
         return None
 
     date_annonce = _to_clean_str(row.get("date_annonce"))
-    time_fields = derive_time_fields(date_annonce=date_annonce, created_at=row.get("created_at"), fallback_iso=now_iso())
+    time_fields = derive_time_fields(
+        date_annonce=date_annonce,
+        created_at=row.get("created_at"),
+        fallback_iso=now_iso(),
+        year_month=row.get("year_month"),
+        periode=row.get("periode"),
+        annee=row.get("annee"),
+        trimestre=row.get("trimestre"),
+        seed_value=f"{titre}|{zone}|{row.get('source')}",
+    )
     geo_fields = infer_geo_hierarchy(zone)
 
     surface_m2 = _to_float(row.get("surface_m2"))

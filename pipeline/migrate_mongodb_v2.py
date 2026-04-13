@@ -35,6 +35,11 @@ def backfill_annonces(db):
             date_annonce=annonce.get("date_annonce"),
             created_at=annonce.get("created_at"),
             fallback_iso=annonce.get("created_at") or now_iso(),
+            year_month=annonce.get("year_month"),
+            periode=annonce.get("periode"),
+            annee=annonce.get("annee"),
+            trimestre=annonce.get("trimestre"),
+            seed_value=f"{annonce.get('titre')}|{zone_value}|{annonce.get('source')}",
         )
         update_doc = {
             "zone_display": geo_fields["zone_name"],

@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
+
 from bson import ObjectId
+from bson.errors import InvalidId
 
 
 def utc_now_iso() -> str:
@@ -14,4 +16,7 @@ def serialize_doc(doc: dict) -> dict:
 
 
 def parse_object_id(value: str) -> ObjectId:
-    return ObjectId(value)
+    try:
+        return ObjectId(value)
+    except (InvalidId, TypeError) as exc:
+        raise ValueError("Identifiant invalide") from exc

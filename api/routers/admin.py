@@ -1,9 +1,8 @@
-from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.auth.middleware import get_current_admin
 from api.database import db
-from api.utils import serialize_doc
+from api.utils import parse_object_id, serialize_doc
 
 router = APIRouter()
 
@@ -19,9 +18,14 @@ async def list_users(admin=Depends(get_current_admin)):
 
 @router.put("/users/{id}")
 async def update_user(id: str, payload: dict, admin=Depends(get_current_admin)):
+    try:
+        object_id = parse_object_id(id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Identifiant utilisateur invalide")
+
     allowed = {k: v for k, v in payload.items() if k in {"role", "blocked", "nom", "prenom"}}
-    await db["users"].update_one({"_id": ObjectId(id)}, {"$set": allowed})
-    user = await db["users"].find_one({"_id": ObjectId(id)})
+    await db["users"].update_one({"_id": object_id}, {"$set": allowed})
+    user = await db["users"].find_one({"_id": object_id})
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
     user.pop("hashed_password", None)
@@ -30,7 +34,11 @@ async def update_user(id: str, payload: dict, admin=Depends(get_current_admin)):
 
 @router.delete("/users/{id}")
 async def delete_user(id: str, admin=Depends(get_current_admin)):
-    await db["users"].delete_one({"_id": ObjectId(id)})
+    try:
+        object_id = parse_object_id(id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Identifiant utilisateur invalide")
+    await db["users"].delete_one({"_id": object_id})
     return {"message": "Utilisateur supprimé"}
 
 
@@ -42,13 +50,21 @@ async def admin_annonces(admin=Depends(get_current_admin)):
 
 @router.put("/annonces/{id}/valider")
 async def valider_annonce(id: str, admin=Depends(get_current_admin)):
-    await db["annonces"].update_one({"_id": ObjectId(id)}, {"$set": {"statut": "valide"}})
+    try:
+        object_id = parse_object_id(id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Identifiant annonce invalide")
+    await db["annonces"].update_one({"_id": object_id}, {"$set": {"statut": "valide"}})
     return {"message": "Annonce validée"}
 
 
 @router.put("/annonces/{id}/refuser")
 async def refuser_annonce(id: str, admin=Depends(get_current_admin)):
-    await db["annonces"].update_one({"_id": ObjectId(id)}, {"$set": {"statut": "refuse"}})
+    try:
+        object_id = parse_object_id(id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Identifiant annonce invalide")
+    await db["annonces"].update_one({"_id": object_id}, {"$set": {"statut": "refuse"}})
     return {"message": "Annonce refusée"}
 
 

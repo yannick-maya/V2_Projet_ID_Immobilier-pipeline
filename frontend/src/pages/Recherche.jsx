@@ -5,7 +5,7 @@ import MapView from "../components/MapView";
 import { annoncesApi, favorisApi, statsApi } from "../services/api";
 
 const Recherche = () => {
-  const [filters, setFilters] = useState({ zone: "", type_bien: "", type_offre: "", prix_min: "", prix_max: "", page: 1, limit: 20 });
+  const [filters, setFilters] = useState({ q: "", zone: "", type_bien: "", type_offre: "", prix_min: "", prix_max: "", page: 1, limit: 20 });
   const [data, setData] = useState({ total: 0, data: [] });
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState({ zones: [], types_bien: [], types_offre: [] });
@@ -13,9 +13,22 @@ const Recherche = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await annoncesApi.list(filters);
-      setData(res.data);
-    } catch {
+      const params = {
+        q: filters.q || undefined,
+        zone: filters.zone || undefined,
+        type_bien: filters.type_bien || undefined,
+        type_offre: filters.type_offre || undefined,
+        prix_min: filters.prix_min ? Number(filters.prix_min) : undefined,
+        prix_max: filters.prix_max ? Number(filters.prix_max) : undefined,
+        page: filters.page,
+        limit: filters.limit,
+      };
+      // Nettoyer les undefined
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+      const res = await annoncesApi.list(params);
+      setData(res.data || { total: 0, data: [] });
+    } catch (err) {
+      console.error("Erreur recherche:", err);
       setData({ total: 0, data: [] });
     } finally {
       setLoading(false);
@@ -31,7 +44,14 @@ const Recherche = () => {
   }, []);
 
   const save = (id) => favorisApi.add(id).catch(() => null);
-  const showMap = useMemo(() => Boolean(filters.zone && filters.zone.trim()), [filters.zone]);
+  const mapPoints = useMemo(
+    () =>
+      data.data
+        .map((a) => ({ ...a, lat: a.localisation?.coordinates?.[1], lon: a.localisation?.coordinates?.[0] }))
+        .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lon)),
+    [data.data]
+  );
+  const showMap = useMemo(() => Boolean(filters.zone && filters.zone.trim() && mapPoints.length), [filters.zone, mapPoints.length]);
 
   return (
     <div className="space-y-5">
@@ -54,19 +74,31 @@ const Recherche = () => {
         >
           {loading ? "Recherche..." : "Appliquer les filtres"}
         </button>
-        <p className="text-sm text-slate-600"><strong>{data.total}</strong> résultats</p>
+        <p className="text-sm text-slate-600"><strong>{data.total}</strong> resultats</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {data.data.map((annonce) => <AnnonceCard key={annonce.id} annonce={annonce} onSave={save} />)}
       </div>
 
+      {!loading && data.data.length === 0 && (
+        <div className="rounded-2xl bg-white p-6 text-sm text-slate-600 shadow-lg">
+          Aucun resultat pour ces filtres. Essaie d'alleger la zone, le type de bien ou le budget.
+        </div>
+      )}
+
       {showMap && (
         <section className="rounded-2xl bg-white p-6 shadow-lg">
           <h3 className="text-xl font-bold text-[#0B3954]">Carte de la zone recherchée</h3>
           <p className="mb-4 mt-1 text-sm text-slate-500">Zone: {filters.zone}</p>
-          <MapView points={data.data.map((a) => ({ ...a, lat: a.localisation?.coordinates?.[1], lon: a.localisation?.coordinates?.[0] }))} />
+          <MapView points={mapPoints} />
         </section>
+      )}
+
+      {!showMap && filters.zone && (
+        <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+          La carte n'est pas affichee pour cette recherche car aucune annonce geolocalisee n'a ete trouvee dans cette zone.
+        </div>
       )}
 
       <div className="flex gap-2">

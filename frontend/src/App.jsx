@@ -2,6 +2,7 @@
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import About from "./pages/About";
 import BienDetail from "./pages/BienDetail";
 import Dashboard from "./pages/Dashboard";
 import Favoris from "./pages/Favoris";
@@ -20,12 +21,14 @@ const App = () => (
     <main className="mx-auto max-w-[1380px] px-3 py-4 md:px-4">
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/a-propos" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/recherche" element={<Recherche />} />
         <Route path="/annonce/:id" element={<BienDetail />} />
         <Route path="/indice" element={<Indice />} />
         <Route path="/indice/tendance/:tendance" element={<IndiceTendance />} />
+        <Route path="/indice-tendance" element={<Navigate to="/indice/tendance/HAUSSE" replace />} />
         <Route path="/simulateur" element={<Simulateur />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/favoris" element={<ProtectedRoute><Favoris /></ProtectedRoute>} />

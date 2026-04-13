@@ -17,6 +17,7 @@ const Navbar = () => {
           <NavLink to="/recherche" className={linkClass}>Recherche</NavLink>
           <NavLink to="/indice" className={linkClass}>Indice</NavLink>
           <NavLink to="/simulateur" className={linkClass}>Simulateur</NavLink>
+          <NavLink to="/a-propos" className={linkClass}>A propos</NavLink>
           {user ? (
             <>
               <NavLink to="/dashboard" className={linkClass}>Dashboard</NavLink>

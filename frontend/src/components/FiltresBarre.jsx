@@ -1,6 +1,12 @@
 ﻿const FiltresBarre = ({ filters, setFilters }) => (
   <>
-    <div className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-md md:grid-cols-5">
+    <div className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-md md:grid-cols-6">
+      <input
+        className="input-modern"
+        placeholder="Mot-cle"
+        value={filters.q || ""}
+        onChange={(e) => setFilters((current) => ({ ...current, q: e.target.value, page: 1 }))}
+      />
       <input
         className="input-modern"
         placeholder="Zone"

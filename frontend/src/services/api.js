@@ -35,7 +35,11 @@ export const annoncesApi = {
 export const statsApi = {
   list: (params) => api.get("/statistiques", { params }),
   options: () => api.get("/statistiques/options"),
+  project: () => api.get("/statistiques/project"),
   overview: (params) => api.get("/statistiques/overview", { params }),
+  timeline: (params) => api.get("/statistiques/timeline", { params }),
+  compareSources: (params) => api.get("/statistiques/comparaison-sources", { params }),
+  compareZones: (params) => api.get("/statistiques/comparaison-zones", { params }),
 };
 
 export const indiceApi = {

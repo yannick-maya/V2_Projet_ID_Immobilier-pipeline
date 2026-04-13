@@ -339,3 +339,33 @@ streamlit     → lit tout MySQL → affiche le dashboard
 # airflow
 
 docker exec -it id_immobilier_airflow airflow users create --username admin --password admin1234 --firstname Admin --lastname User --role Admin --email admin@idimmobilier.tg
+# ID Immobilier - V2 MongoDB / FastAPI / React
+
+> Version active du projet: API FastAPI + MongoDB + Frontend React + Admin React + Pipeline Python/Spark/Airflow
+
+## Demarrage rapide V2
+
+```bash
+docker-compose up -d --build
+```
+
+Services principaux:
+
+- Front public: `http://localhost:3000`
+- Admin: `http://localhost:3001`
+- API: `http://localhost:8000`
+- Airflow: `http://localhost:8081`
+- Spark UI: `http://localhost:8082`
+
+Variables importantes:
+
+- `MONGO_URI`
+- `MONGO_DB`
+- `JWT_SECRET`
+- `REACT_APP_API_URL`
+- `ID_IMMO_START_PERIOD` / `ID_IMMO_END_PERIOD` pour generer automatiquement des periodes quand les dates source sont absentes
+
+## Notes de migration
+
+- La stack web active du projet est la V2 MongoDB.
+- Le dashboard historique `dashboard/app.py` reste une base V1 MySQL/Streamlit.

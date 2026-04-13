@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from hashlib import md5
 from typing import Any
 
 
@@ -107,14 +109,89 @@ def parse_datetime(value: Any) -> datetime | None:
     return None
 
 
+def _parse_period_hints(
+    year_month: Any = None,
+    periode: Any = None,
+    annee: Any = None,
+    trimestre: Any = None,
+) -> datetime | None:
+    year_month_text = str(year_month or "").strip()
+    if re.fullmatch(r"\d{4}-\d{2}", year_month_text):
+        try:
+            return datetime.strptime(f"{year_month_text}-01", "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+
+    periode_text = str(periode or "").strip().upper()
+    match = re.fullmatch(r"(\d{4})-Q([1-4])", periode_text)
+    if match:
+        year = int(match.group(1))
+        quarter = int(match.group(2))
+        month = ((quarter - 1) * 3) + 1
+        return datetime(year, month, 1, tzinfo=timezone.utc)
+
+    try:
+        year = int(annee) if annee is not None else None
+        quarter = int(trimestre) if trimestre is not None else None
+    except (TypeError, ValueError):
+        year = None
+        quarter = None
+
+    if year and quarter and 1 <= quarter <= 4:
+        month = ((quarter - 1) * 3) + 1
+        return datetime(year, month, 1, tzinfo=timezone.utc)
+
+    return None
+
+
+def _synthetic_observation_datetime(seed_value: Any = None) -> datetime:
+    start_period = os.getenv("ID_IMMO_START_PERIOD", "2025-10")
+    end_period = os.getenv("ID_IMMO_END_PERIOD", "2026-02")
+
+    start_dt = _parse_period_hints(year_month=start_period) or datetime(2025, 10, 1, tzinfo=timezone.utc)
+    end_dt = _parse_period_hints(year_month=end_period) or datetime(2026, 2, 1, tzinfo=timezone.utc)
+    if end_dt < start_dt:
+        start_dt, end_dt = end_dt, start_dt
+
+    month_starts = []
+    cursor = start_dt.replace(day=1)
+    limit = end_dt.replace(day=1)
+    while cursor <= limit:
+        month_starts.append(cursor)
+        next_month = cursor.replace(day=28) + timedelta(days=4)
+        cursor = next_month.replace(day=1)
+
+    if not month_starts:
+        month_starts = [datetime.now(timezone.utc).replace(day=1)]
+
+    seed_text = str(seed_value or "id-immobilier")
+    digest = md5(seed_text.encode("utf-8")).hexdigest()
+    month_index = int(digest[:8], 16) % len(month_starts)
+    day_offset = int(digest[8:16], 16) % 28
+    base = month_starts[month_index]
+    return base + timedelta(days=day_offset)
+
+
 def derive_time_fields(
     date_annonce: Any = None,
     created_at: Any = None,
     fallback_iso: str | None = None,
+    year_month: Any = None,
+    periode: Any = None,
+    annee: Any = None,
+    trimestre: Any = None,
+    seed_value: Any = None,
 ) -> dict[str, Any]:
     posted_dt = parse_datetime(date_annonce)
     collected_dt = parse_datetime(created_at)
-    observation_dt = posted_dt or collected_dt or parse_datetime(fallback_iso) or datetime.now(timezone.utc)
+    hinted_dt = _parse_period_hints(year_month=year_month, periode=periode, annee=annee, trimestre=trimestre)
+    observation_dt = (
+        posted_dt
+        or hinted_dt
+        or collected_dt
+        or parse_datetime(fallback_iso)
+        or _synthetic_observation_datetime(seed_value=seed_value)
+    )
 
     observation_year = observation_dt.year
     observation_month = observation_dt.month

@@ -31,7 +31,7 @@ const Indice = () => {
     <div className="space-y-5">
       <div className="rounded-2xl bg-white p-5 shadow-lg">
         <h2 className="text-2xl font-bold text-[#0B3954]">Indice immobilier par zone</h2>
-        <p className="text-sm text-slate-500">Suivi des tendances de prix (HAUSSE/STABLE/BAISSE) depuis MongoDB.</p>
+        <p className="text-sm text-slate-500">Suivi des tendances de prix  depuis la base de données des donnees sourcées et etudiées .</p>
       </div>
 
       {tendances && (

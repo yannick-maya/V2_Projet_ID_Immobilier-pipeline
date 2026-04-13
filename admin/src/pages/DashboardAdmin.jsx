@@ -48,20 +48,38 @@ const DashboardAdmin = () => {
     color: name === 'sous-evalue' ? '#10B981' : name === 'sur-evalue' ? '#EF4444' : '#F59E0B'
   }));
 
+  const terrainOtrPoints = (overview?.terrain_otr_points || []).map((item, index) => ({
+    label: item.zone || `Terrain ${index + 1}`,
+    market_price: item.prix || 0,
+    otr_price: item.prix_otr || 0,
+    diff: item.difference_pct || 0,
+  }));
+
+  const terrainOtrHistogram = (overview?.terrain_otr_histogram || []).map((item) => ({
+    label: item.label || 'Catégorie',
+    count: item.count || 0,
+  }));
+
   const COLORS = ["#065A82", "#1C7293", "#00B4D8", "#F59E0B", "#7CC6D9", "#0B3954"];
+  const metricColorClasses = {
+    blue: { border: "border-blue-500", bg: "bg-blue-100" },
+    green: { border: "border-green-500", bg: "bg-green-100" },
+    amber: { border: "border-amber-500", bg: "bg-amber-100" },
+    purple: { border: "border-purple-500", bg: "bg-purple-100" },
+  };
 
   const formatNumber = (value, options = {}) =>
     Number(value || 0).toLocaleString("fr-FR", { maximumFractionDigits: 0, ...options });
 
   const MetricCard = ({ title, value, subtitle, icon, color = "blue" }) => (
-    <div className={`bg-white p-6 rounded-xl shadow-lg border-l-4 border-${color}-500 hover:shadow-xl transition-shadow duration-300`}>
+    <div className={`bg-white p-6 rounded-xl shadow-lg border-l-4 ${metricColorClasses[color]?.border || metricColorClasses.blue.border} hover:shadow-xl transition-shadow duration-300`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-slate-600 font-semibold text-sm">{title}</p>
           <p className="text-3xl font-bold text-slate-900 mt-2">{value}</p>
           {subtitle && <p className="text-xs text-slate-500 mt-2">{subtitle}</p>}
         </div>
-        <div className={`p-3 rounded-full bg-${color}-100`}>
+        <div className={`p-3 rounded-full ${metricColorClasses[color]?.bg || metricColorClasses.blue.bg}`}>
           <span className="text-2xl">{icon}</span>
         </div>
       </div>
@@ -109,21 +127,21 @@ const DashboardAdmin = () => {
           title="Annonces Valides"
           value={formatNumber(stats?.nb_annonces_par_statut?.valide || 0)}
           subtitle="Annonces approuvées"
-          icon="✅"
+          icon=""
           color="green"
         />
         <MetricCard
           title="Prix Moyen / m²"
           value={`${formatNumber(kpis.prix_moyen_m2 || 0)} FCFA`}
           subtitle="Prix moyen du marché"
-          icon="💰"
+          icon=""
           color="amber"
         />
         <MetricCard
           title="Sources"
           value={formatNumber(kpis.sources || 0)}
           subtitle="Sources de données"
-          icon="📊"
+          icon=""
           color="purple"
         />
       </div>
@@ -235,6 +253,69 @@ const DashboardAdmin = () => {
               <Tooltip formatter={(value) => [`${value} annonces`, 'Nombre']} />
             </PieChart>
           </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ChartCard
+          title="Comparaison terrains : marché vs valeur vénale"
+          subtitle="Top terrains avec écart de prix officiel"
+        >
+          {terrainOtrPoints.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={terrainOtrPoints}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="label" type="category" tick={{ fontSize: 11 }} interval={0} angle={-35} textAnchor="end" height={80} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <YAxis yAxisId="right" orientation="right" stroke="#EF4444" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  formatter={(value, name) => [
+                    name === 'diff' ? `${value}%` : `${formatNumber(value)} FCFA`,
+                    name === 'market_price' ? 'Prix marché' : name === 'otr_price' ? 'Prix OTR' : 'Ecart (%)'
+                  ]}
+                />
+                <Legend />
+                <Bar dataKey="market_price" fill="#065A82" name="Prix marché" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="otr_price" fill="#F59E0B" name="Prix OTR" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="diff" stroke="#EF4444" strokeWidth={3} name="Ecart (%)" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-slate-500">Aucune donnée terrain/OTR disponible pour le moment.</p>
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Histogramme des écarts OTR terrains"
+          subtitle="Répartition des terrains selon leur écart de valeur"
+        >
+          {terrainOtrHistogram.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={terrainOtrHistogram}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="label" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  formatter={(value) => [`${value} terrains`, 'Nombre']}
+                />
+                <Bar dataKey="count" fill="#0B3954" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-slate-500">Aucune donnée OTR terrain disponible pour le moment.</p>
+          )}
         </ChartCard>
       </div>
 

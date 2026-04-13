@@ -6,7 +6,7 @@ const UserWelcomeCards = () => {
 
   const cards = [
     {
-      icon: "🏠",
+      icon: "",
       title: "Explorez le Marché",
       description: "Découvrez les tendances immobilières par zone et type de bien. Nos analyses sont basées sur des données réelles du marché togolais.",
       link: "/recherche",
@@ -14,7 +14,7 @@ const UserWelcomeCards = () => {
       color: "from-blue-500 to-blue-600"
     },
     {
-      icon: "📊",
+      icon: "",
       title: "Analysez les Prix",
       description: "Comprenez les prix au m² par quartier. Nous comparons les offres du marché avec les valeurs officielles pour une transparence totale.",
       link: "/indice",
@@ -22,7 +22,7 @@ const UserWelcomeCards = () => {
       color: "from-green-500 to-green-600"
     },
     {
-      icon: "⭐",
+      icon: "",
       title: "Vos Favoris",
       description: "Sauvegardez et suivez les biens qui vous intéressent. Recevez des notifications sur les évolutions de prix.",
       link: "/favoris",
@@ -60,7 +60,7 @@ const UserWelcomeCards = () => {
       {/* Message de bienvenue personnalisé */}
       <div className="text-center">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Bienvenue, {user?.email?.split('@')[0]} ! 👋
+          Bienvenue, {user?.email?.split('@')[0]} ! 
         </h2>
         <p className="text-lg text-gray-600">
           Découvrez les outils puissants d'ID Immobilier pour votre projet immobilier
