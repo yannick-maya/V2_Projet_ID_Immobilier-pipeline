@@ -102,6 +102,49 @@ Attendu:
 - chargement depuis MongoDB
 - filtre `Periode` disponible en sidebar
 
+### 4.8 Correction des périodes
+
+```bash
+python pipeline/fix_periodes.py
+```
+
+Attendu: périodes "2026-Q2" remplacées par dates aléatoires entre novembre 2025 et février 2026.
+
+### 4.9 Migration MongoDB v2
+
+```bash
+python pipeline/migrate_mongodb_v2.py
+```
+
+Attendu:
+
+- données nettoyées migrées vers MongoDB
+- collections `annonces` et `venales` alimentées
+- périodes corrigées dans la base
+
+### 4.10 Intégration données OTR
+
+```bash
+python pipeline/integrate_otr.py
+```
+
+Attendu:
+
+- annonces enrichies avec `prix_otr`, `difference_otr`, `statut_otr`
+- statistiques d'écarts affichées
+- données prêtes pour les comparaisons marché vs OTR
+
+### 4.11 Tests des nouveaux endpoints
+
+```bash
+# Tester les endpoints périodiques
+curl "http://localhost:8000/periodique/comparaison?zone=adidogome"
+curl "http://localhost:8000/periodique/evolution"
+curl "http://localhost:8000/periodique/annonces?periode=2025-11"
+```
+
+Attendu: données JSON avec comparaisons OTR et évolutions temporelles.
+
 ## 5) Tests Chantier 3 (API FastAPI)
 
 Lancer l'API:

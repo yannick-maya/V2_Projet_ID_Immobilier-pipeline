@@ -14,7 +14,6 @@ const Navbar = () => {
         <Link to="/" className="text-lg font-extrabold text-[#065A82] md:text-xl">ID Immobilier</Link>
         <div className="flex flex-wrap items-center gap-2">
           <NavLink to="/" className={linkClass}>Accueil</NavLink>
-          <NavLink to="/a-propos" className={linkClass}>A propos</NavLink>
           {user ? (
             <>
               <NavLink to="/recherche" className={linkClass}>Recherche</NavLink>
@@ -22,10 +21,12 @@ const Navbar = () => {
               <NavLink to="/simulateur" className={linkClass}>Simulateur</NavLink>
               <NavLink to="/dashboard" className={linkClass}>Dashboard</NavLink>
               <NavLink to="/favoris" className={linkClass}>Favoris</NavLink>
+              <NavLink to="/a-propos" className={linkClass}>A propos</NavLink>
               <button onClick={logout} className="rounded-lg bg-[#F59E0B] px-3 py-2 text-sm font-semibold text-white hover:bg-[#D97706]">Déconnexion</button>
             </>
           ) : (
             <>
+              <NavLink to="/a-propos" className={linkClass}>A propos</NavLink>
               <NavLink to="/login" className={linkClass}>Connexion</NavLink>
               <NavLink to="/register" className={linkClass}>Inscription</NavLink>
             </>

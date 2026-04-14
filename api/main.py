@@ -11,8 +11,7 @@ from api.routers.favoris import router as favoris_router
 from api.routers.indice import router as indice_router
 from api.routers.scoring import router as scoring_router
 from api.routers.statistiques import router as stats_router
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from api.routers.periodique import router as periodique_router
 
 app = FastAPI(
     title="ID Immobilier API",
@@ -25,6 +24,7 @@ app.add_middleware(
     allow_origins=[
         "https://id-immobilier.vercel.app",
         "https://dashbordadmin-id-immobilier-pipelin.vercel.app",
+        "https://dashbordadmin-id-immobilier-pipeline-2y7j8r2cl.vercel.app",
         "https://admin-id-immobilier-pipeline.vercel.app",
         "http://localhost:3000",
         "http://localhost:3001",
@@ -50,9 +50,9 @@ async def startup_indexes():
     await db["zones"].create_index([("slug", 1)], name="idx_zone_slug")
 
 
-@app.get("/")
-async def health():
-    return {"service": "id-immobilier-api", "status": "ok"}
+@app.get("/test-periodique")
+async def test_periodique():
+    return {"message": "Test periodique fonctionne", "status": "ok"}
 
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
@@ -62,3 +62,4 @@ app.include_router(indice_router, prefix="/indice", tags=["Indice"])
 app.include_router(scoring_router, prefix="/scoring", tags=["Scoring"])
 app.include_router(favoris_router, prefix="/favoris", tags=["Favoris"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
+app.include_router(periodique_router, prefix="/periodique", tags=["Données Périodiques"])

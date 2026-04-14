@@ -71,6 +71,53 @@ def load_venales():
     """)
 
 @st.cache_data(ttl=3600)
+def load_comparaison_otr_marche():
+    """Charge les données pour comparer prix marché vs prix OTR"""
+    return run_query("""
+        SELECT
+            a.prix_m2 as prix_marche_m2,
+            vv.prix_m2_officiel as prix_otr_m2,
+            (a.prix_m2 - vv.prix_m2_officiel) as ecart_absolu,
+            ((a.prix_m2 - vv.prix_m2_officiel) / vv.prix_m2_officiel * 100) as ecart_pourcent,
+            CASE
+                WHEN (a.prix_m2 - vv.prix_m2_officiel) / vv.prix_m2_officiel > 0.20 THEN 'Surévalué (>20%)'
+                WHEN (a.prix_m2 - vv.prix_m2_officiel) / vv.prix_m2_officiel < -0.20 THEN 'Sous-évalué (<-20%)'
+                ELSE 'Conforme (±20%)'
+            END as statut_evaluation,
+            b.type_bien,
+            z.nom as zone,
+            a.titre
+        FROM annonce a
+        JOIN bien_immobilier b ON a.id_bien = b.id
+        JOIN zone_geographique z ON b.id_zone = z.id
+        LEFT JOIN valeur_venale vv ON vv.id_zone = z.id
+        WHERE a.prix_m2 IS NOT NULL
+        AND vv.prix_m2_officiel IS NOT NULL
+        AND a.prix_m2 > 0
+        ORDER BY ecart_pourcent DESC
+    """)
+
+@st.cache_data(ttl=3600)
+def load_evolution_prix():
+    """Charge l'évolution des prix par période"""
+    return run_query("""
+        SELECT
+            DATE_FORMAT(a.date_annonce, '%Y-%m') as periode,
+            AVG(a.prix_m2) as prix_marche_moyen,
+            AVG(vv.prix_m2_officiel) as prix_otr_moyen,
+            COUNT(a.id) as nb_annonces,
+            b.type_bien,
+            z.nom as zone
+        FROM annonce a
+        JOIN bien_immobilier b ON a.id_bien = b.id
+        JOIN zone_geographique z ON b.id_zone = z.id
+        LEFT JOIN valeur_venale vv ON vv.id_zone = z.id
+        WHERE a.prix_m2 IS NOT NULL AND a.date_annonce IS NOT NULL
+        GROUP BY DATE_FORMAT(a.date_annonce, '%Y-%m'), b.type_bien, z.nom
+        ORDER BY periode DESC, zone, type_bien
+    """)
+
+@st.cache_data(ttl=3600)
 def load_sources():
     return run_query("""
         SELECT s.nom AS source, COUNT(a.id) AS nombre_annonces
@@ -507,6 +554,139 @@ if page == "Tableau de bord":
             st.info("Pas de zones en commun pour la comparaison.")
     else:
         st.info("Valeurs venales non disponibles.")
+    st.divider()
+
+    # Section Comparaison OTR vs Marché détaillée
+    st.subheader("📊 Analyse Détaillée : Marché vs Valeurs OTR")
+
+    # Charger les données de comparaison
+    try:
+        df_comparaison = load_comparaison_otr_marche()
+        df_evolution = load_evolution_prix()
+
+        if not df_comparaison.empty:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("#### Distribution des Écarts OTR")
+                fig_ecarts = px.histogram(
+                    df_comparaison,
+                    x="ecart_pourcent",
+                    nbins=20,
+                    color="statut_evaluation",
+                    color_discrete_map={
+                        "Surévalué (>20%)": "#E74C3C",
+                        "Sous-évalué (<-20%)": "#27AE60",
+                        "Conforme (±20%)": "#F39C12"
+                    },
+                    labels={"ecart_pourcent": "Écart par rapport à OTR (%)", "count": "Nombre d'annonces"},
+                    title="Répartition des écarts prix marché / OTR"
+                )
+                st.plotly_chart(fig_ecarts, use_container_width=True)
+
+            with col2:
+                st.markdown("#### Écarts par Zone")
+                df_zone_ecart = df_comparaison.groupby("zone").agg({
+                    "ecart_pourcent": "mean",
+                    "prix_marche_m2": "count"
+                }).reset_index()
+                df_zone_ecart.columns = ["zone", "ecart_moyen_pourcent", "nombre_annonces"]
+                df_zone_ecart = df_zone_ecart.sort_values("ecart_moyen_pourcent", ascending=False).head(10)
+
+                fig_zone = px.bar(
+                    df_zone_ecart,
+                    x="zone",
+                    y="ecart_moyen_pourcent",
+                    color="ecart_moyen_pourcent",
+                    color_continuous_scale=["green", "yellow", "red"],
+                    labels={"ecart_moyen_pourcent": "Écart moyen (%)", "zone": "Zone"},
+                    title="Écart moyen par zone (Top 10)"
+                )
+                st.plotly_chart(fig_zone, use_container_width=True)
+
+            # Graphique de dispersion : Prix marché vs Prix OTR
+            st.markdown("#### Corrélation Prix Marché vs Prix OTR")
+            fig_scatter = px.scatter(
+                df_comparaison,
+                x="prix_otr_m2",
+                y="prix_marche_m2",
+                color="statut_evaluation",
+                color_discrete_map={
+                    "Surévalué (>20%)": "#E74C3C",
+                    "Sous-évalué (<-20%)": "#27AE60",
+                    "Conforme (±20%)": "#F39C12"
+                },
+                labels={
+                    "prix_otr_m2": "Prix OTR (FCFA/m²)",
+                    "prix_marche_m2": "Prix Marché (FCFA/m²)"
+                },
+                title="Corrélation entre prix du marché et valeurs OTR",
+                hover_data=["titre", "zone", "ecart_pourcent"]
+            )
+
+            # Ajouter la ligne de référence (prix marché = prix OTR)
+            fig_scatter.add_trace(
+                go.Scatter(
+                    x=[df_comparaison["prix_otr_m2"].min(), df_comparaison["prix_otr_m2"].max()],
+                    y=[df_comparaison["prix_otr_m2"].min(), df_comparaison["prix_otr_m2"].max()],
+                    mode="lines",
+                    name="Ligne de référence (Prix = OTR)",
+                    line=dict(color="black", dash="dash")
+                )
+            )
+            st.plotly_chart(fig_scatter, use_container_width=True)
+
+            # Statistiques récapitulatives
+            st.markdown("#### 📈 Statistiques de Comparaison")
+            stats_cols = st.columns(4)
+
+            total_annonces = len(df_comparaison)
+            surevalue = len(df_comparaison[df_comparaison["statut_evaluation"] == "Surévalué (>20%)"])
+            sousvalue = len(df_comparaison[df_comparaison["statut_evaluation"] == "Sous-évalué (<-20%)"])
+            conforme = len(df_comparaison[df_comparaison["statut_evaluation"] == "Conforme (±20%)"])
+
+            with stats_cols[0]:
+                st.metric("Total Annonces Comparées", f"{total_annonces:,}")
+            with stats_cols[1]:
+                st.metric("Surévaluées (>20%)", f"{surevalue:,}", f"{surevalue/total_annonces*100:.1f}%")
+            with stats_cols[2]:
+                st.metric("Sous-évaluées (<-20%)", f"{sousvalue:,}", f"{sousvalue/total_annonces*100:.1f}%")
+            with stats_cols[3]:
+                st.metric("Conformes (±20%)", f"{conforme:,}", f"{conforme/total_annonces*100:.1f}%")
+
+        else:
+            st.info("Données de comparaison OTR non disponibles.")
+
+        # Évolution temporelle si disponible
+        if not df_evolution.empty:
+            st.markdown("#### 📅 Évolution Temporelle des Prix")
+            fig_evolution = px.line(
+                df_evolution,
+                x="periode",
+                y=["prix_marche_moyen", "prix_otr_moyen"],
+                labels={
+                    "periode": "Période",
+                    "value": "Prix moyen (FCFA/m²)",
+                    "variable": "Type de prix"
+                },
+                title="Évolution des prix marché vs OTR dans le temps",
+                markers=True
+            )
+            fig_evolution.update_layout(
+                legend_title_text="",
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                )
+            )
+            st.plotly_chart(fig_evolution, use_container_width=True)
+
+    except Exception as e:
+        st.warning(f"Erreur lors du chargement des données de comparaison: {e}")
+
     st.divider()
 
     # Carte — echantillon representatif
