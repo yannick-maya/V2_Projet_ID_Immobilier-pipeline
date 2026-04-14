@@ -88,6 +88,14 @@ const Home = () => {
             ID Immobilier recentre l'analyse sur les statistiques de marché par bien, par zone et par type,
             au lieu d'exposer partout les prix bruts. {hasUser && "Découvrez vos outils personnalisés ci-dessous."}
           </p>
+          {!hasUser && (
+            <Link
+              to="/login"
+              className="inline-flex items-center rounded-3xl bg-gradient-to-r from-[#F59E0B] via-[#FFDD57] to-[#FBAE31] px-6 py-3 text-sm font-bold uppercase tracking-wide text-[#0B3954] shadow-[0_20px_50px_-20px_rgba(245,149,20,0.9)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_-20px_rgba(245,149,20,1)]"
+            >
+              Se connecter
+            </Link>
+          )}
           {hasUser && (
             <div className="flex flex-wrap gap-3 animate-fade-in-slow">
               <Link to="/recherche" className="group rounded-xl bg-[#F59E0B] px-5 py-3 font-semibold text-[#0B3954] hover:bg-[#f7b344] hover:shadow-lg transition-all duration-300 transform hover:scale-105 shadow-xl">

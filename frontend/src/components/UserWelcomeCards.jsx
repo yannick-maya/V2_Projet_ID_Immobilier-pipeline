@@ -30,7 +30,7 @@ const UserWelcomeCards = () => {
       color: "from-purple-500 to-purple-600"
     },
     {
-      icon: "🧮",
+      icon: "",
       title: "Simulez votre Projet",
       description: "Calculez vos mensualités, estimez les frais annexes et planifiez votre investissement immobilier.",
       link: "/simulateur",
@@ -38,7 +38,7 @@ const UserWelcomeCards = () => {
       color: "from-orange-500 to-orange-600"
     },
     {
-      icon: "📈",
+      icon: "",
       title: "Tendances du Marché",
       description: "Suivez l'évolution des prix immobiliers dans le temps. Identifiez les meilleures opportunités d'achat ou de vente.",
       link: "/indice-tendance",
@@ -46,7 +46,7 @@ const UserWelcomeCards = () => {
       color: "from-teal-500 to-teal-600"
     },
     {
-      icon: "👤",
+      icon: "",
       title: "Votre Profil",
       description: "Gérez vos informations personnelles, vos préférences de recherche et l'historique de vos consultations.",
       link: "/profil",
